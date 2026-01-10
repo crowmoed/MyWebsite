@@ -1,0 +1,38 @@
+---
+// src/pages/projects.astro
+import Layout from '../layout/Layout.astro';
+---
+
+<Layout>
+  <div class="projects-wrapper">
+    
+    <header class="projects-header">
+      <a href="/" class="back-link">
+        <span class="arrow">←</span> Back
+      </a>
+      <h1 class="fade-in">Selected Works</h1>
+    </header>
+
+    <div class="projects-grid fade-in-delay">
+
+      <article class="project-card">
+        <div class="card-content">
+          <h3>Project X</h3>
+          <p>bruh.</p>
+          
+          <div class="tech-stack">
+            <span>Tech A</span>
+            <span>Tech B</span>
+            <span>Tech C</span>
+          </div>
+        </div>
+        
+        <div class="card-links">
+          <a href="#" target="_blank">View ↗</a>
+          <a href="#" target="_blank">GitHub ↗</a>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</Layout>

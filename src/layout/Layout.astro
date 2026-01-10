@@ -1,13 +1,43 @@
+---
+import '../style.css';
+---
+
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<title>Cristiano Pinto - Backend Developer</title>
-		<link rel="preconnect" href="https://fonts.googleapis.com">
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
-	</head>
-    <body>
-        <slot/>
-    </body>
-</html >
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cristiano Pinto - Backend Developer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    
+    <style is:global>
+      /* The container that will fade */
+      .transition-fade {
+        transition: opacity 0.4s ease-in-out;
+        opacity: 1;
+      }
+      
+      /* The state while Swup is loading the next page */
+      html.is-animating .transition-fade {
+        opacity: 0;
+      }
+    </style>
+  </head>
+  
+  <body>
+    <canvas id="bg" style="position: fixed; top: 0; left: 0; z-index: -99;"></canvas>
+    <script type="module" src="/src/main.js"></script>
+
+    <main id="swup" class="transition-fade">
+      <slot/>
+    </main>
+
+    <script>
+      import Swup from 'swup';
+      const swup = new Swup();
+    </script>
+
+  </body>
+</html>
+

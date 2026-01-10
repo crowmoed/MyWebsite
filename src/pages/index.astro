@@ -1,10 +1,65 @@
 ---
-import FrontPage from './frontpage.html';
+// src/pages/index.astro
 import Layout from '../layout/Layout.astro';
 ---
+
 <Layout>
-		
-		<canvas id="bg"></canvas>
-    	<script type="module" src="/src/main.js"></script>
-		<FrontPage />
+  <div class="grid-container">
+      
+    <header class="grid-item name-section">
+      <h1 class="fade-in">Cristiano Pinto</h1>
+      <p class="subtitle fade-in-delay">Backend Developer</p>
+    </header>
+
+    <section class="grid-item bio-section">
+      <p>
+        A developer driven by restless <strong>curiosity</strong>, I move fluidly between 
+        <strong>backend infrastructure</strong> and <strong>application design</strong>.
+        <br><br>
+        Guided by the question <strong><em>"What can I create?"</em></strong>, I use code to explore diverse 
+        domains and build reliable software, regardless of the tech stack.
+      </p>
+    </section>
+    
+    <nav class="grid-item nav-section">
+      <ul class="link-list">
+        
+        <li>
+          <a href="/projects" class="nav-link main-link">
+            <span class="link-text">Projects</span>
+            <span class="arrow">→</span>
+          </a>
+        </li>
+
+        <li>
+          <a href="mailto:you@email.com" class="nav-link main-link">
+            <span class="link-text">Contact</span>
+            <span class="arrow">→</span>
+          </a>
+        </li>
+
+        <li class="social-row">
+          <a href="/resume.pdf" target="_blank" class="social-link">
+            <span>Resume</span>
+            <span class="arrow-small">↓</span>
+          </a>
+
+          <a href="https://linkedin.com/in/yourusername" target="_blank" class="social-link">
+            <span>LinkedIn</span>
+            <span class="arrow-small">↗</span>
+          </a>
+
+          <a href="https://github.com/yourusername" target="_blank" class="social-link">
+            <span>GitHub</span>
+            <span class="arrow-small">↗</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <footer class="grid-item footer-section">
+      <span class="status-dot"></span> Available for new opportunities
+    </footer>
+
+  </div>
 </Layout>

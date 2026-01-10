@@ -9,7 +9,7 @@ scene.background = new THREE.Color(nightColor);
 scene.fog = new THREE.FogExp2(nightColor, 0.015);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
-camera.position.set(0, 10, 30); // Moved camera closer to see the fire
+camera.position.set(0, 10, 30); 
 
 const renderer = new THREE.WebGLRenderer({ 
     canvas: document.querySelector('#bg'),
@@ -47,7 +47,7 @@ const ambientLight = new THREE.AmbientLight(0x202040, 0.4);
 scene.add(ambientLight);
 
 // Moon
-const moonLight = new THREE.DirectionalLight(0xaaccff, 0.5); // Dimmed moon so fire pops more
+const moonLight = new THREE.DirectionalLight(0xaaccff, 0.5); 
 moonLight.position.set(100, 100, 50);
 moonLight.castShadow = true;
 moonLight.shadow.mapSize.width = 2048;
@@ -89,7 +89,7 @@ const _color = new THREE.Color();
 
 for (let i = 0; i < treeCount; i++) {
     const angle = Math.random() * Math.PI * 2;
-    const radius = 20 + Math.random() * 100; // Leave center clear for fire
+    const radius = 20 + Math.random() * 100; 
     const x = Math.cos(angle) * radius;
     const z = Math.sin(angle) * radius;
     const y = getTerrainHeight(x, z) - 5 + 4;
@@ -109,7 +109,7 @@ const fireGroup = new THREE.Group();
 
 // A. The Logs
 const logGeo = new THREE.CylinderGeometry(0.3, 0.3, 4, 6);
-const logMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 1 }); // Wood brown
+const logMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 1 }); 
 
 const log1 = new THREE.Mesh(logGeo, logMat);
 log1.rotation.z = Math.PI / 2;
@@ -128,43 +128,56 @@ log3.position.y = 0.5;
 
 fireGroup.add(log1, log2, log3);
 
-// B. The Fire Light (Flickering)
-const fireLight = new THREE.PointLight(0xff6600, 1.5, 20);
-fireLight.position.set(0, 2, 0);
+// B. The Fire Light (Dimmer)
+const fireLight = new THREE.PointLight(0xff6600, 0.8, 18); // Intensity lowered to 0.8
+fireLight.position.set(0, 1.5, 0);
 fireLight.castShadow = true;
 fireLight.shadow.bias = -0.0001;
 fireGroup.add(fireLight);
 
-// Adjust fire group to sit on terrain
 fireGroup.position.y = getTerrainHeight(0,0) - 5;
 scene.add(fireGroup);
 
 
-// C. Fire Particles
-const fireCount = 150;
+// C. Fire Particles (Low Intensity)
+const fireCount = 200; 
 const firePos = new Float32Array(fireCount * 3);
-const fireLife = []; // Track life of each flame particle
+const fireColors = new Float32Array(fireCount * 3); 
+const fireLife = []; 
 
 for(let i=0; i<fireCount; i++) {
-    firePos[i*3] = (Math.random() - 0.5);
-    firePos[i*3+1] = Math.random() * 3;
-    firePos[i*3+2] = (Math.random() - 0.5);
+    const r = Math.random() * 0.3;
+    const angle = Math.random() * Math.PI * 2;
+    
+    firePos[i*3] = Math.cos(angle) * r;
+    firePos[i*3+1] = Math.random() * 2; 
+    firePos[i*3+2] = Math.sin(angle) * r;
+
     fireLife.push({
-        speed: 0.05 + Math.random() * 0.05,
-        offset: Math.random() * 100
+        speed: 0.01 + Math.random() * 0.03, // Slower speed for calm fire
+        angle: Math.random() * Math.PI * 2,
+        wiggleSpeed: 1.5 + Math.random() * 2
     });
+
+    fireColors[i*3] = 1;
+    fireColors[i*3+1] = 1;
+    fireColors[i*3+2] = 1;
 }
+
 const fireGeom = new THREE.BufferGeometry();
 fireGeom.setAttribute('position', new THREE.BufferAttribute(firePos, 3));
+fireGeom.setAttribute('color', new THREE.BufferAttribute(fireColors, 3)); 
+
 const fireMaterial = new THREE.PointsMaterial({
     size: 0.5,
-    color: 0xffaa33, // Hot Orange
+    vertexColors: true, 
     map: createParticleTexture(),
     transparent: true,
-    opacity: 0.8,
-    blending: THREE.AdditiveBlending, // Makes overlapping particles glow
+    opacity: 0.2, // Very low opacity for subtle effect
+    blending: THREE.AdditiveBlending,
     depthWrite: false
 });
+
 const fireSystem = new THREE.Points(fireGeom, fireMaterial);
 fireSystem.position.y = getTerrainHeight(0,0) - 4.5;
 scene.add(fireSystem);
@@ -211,37 +224,55 @@ function onWindowResize() {
 }
 window.addEventListener('resize', onWindowResize, false)
 
+const _tempColor = new THREE.Color(); 
+const _cBase = new THREE.Color(0xff8800); // Duller Orange (not bright yellow)
+const _cTop = new THREE.Color(0x330500);  // Dark Maroon/Black (fades out faster)
+
 function animate() {
     requestAnimationFrame(animate)
     const time = clock.getElapsedTime();
 
-    // 1. Flicker Fire Light
-    // Random intensity between 1 and 2
-    fireLight.intensity = Math.sin(time * 10) * 0.3 + Math.cos(time * 23) * 0.3 + 1.5; 
-    // Slight jitter in position
-    fireLight.position.x = Math.sin(time * 20) * 0.1;
+    // 1. Flicker Fire Light (Calmer flicker)
+    fireLight.intensity = Math.sin(time * 8) * 0.1 + Math.cos(time * 20) * 0.05 + 0.8; 
+    fireLight.position.x = Math.sin(time * 15) * 0.03;
     
     // 2. Animate Fire Particles
     const fPos = fireSystem.geometry.attributes.position.array;
+    const fCol = fireSystem.geometry.attributes.color.array;
+
     for(let i=0; i<fireCount; i++) {
         let y = fPos[i*3+1];
         
         y += fireLife[i].speed;
         
-        // Reset when too high
-        if (y > 3) {
+        const resetHeight = 2.0 + Math.sin(time + i) * 0.5; // Lower height
+
+        if (y > resetHeight) {
             y = 0;
-            fPos[i*3] = (Math.random() - 0.5); // Reset X to center
-            fPos[i*3+2] = (Math.random() - 0.5); // Reset Z to center
+            const r = Math.random() * 0.3;
+            const a = Math.random() * Math.PI * 2;
+            fPos[i*3] = Math.cos(a) * r;
+            fPos[i*3+2] = Math.sin(a) * r;
         }
         
-        // Taper X/Z as it goes up (Cone shape)
-        fPos[i*3] += (Math.random() - 0.5) * 0.02;
-        fPos[i*3+2] += (Math.random() - 0.5) * 0.02;
+        // Turbulence
+        const wiggle = Math.sin(time * fireLife[i].wiggleSpeed + y * 2) * 0.01 * y;
+        fPos[i*3] += wiggle; 
+        fPos[i*3+2] += Math.cos(time * 3 + y) * 0.01 * y;
 
         fPos[i*3+1] = y;
+
+        // Color Gradient: Orange -> Dark Maroon
+        const lifeRatio = y / 2.0; 
+        _tempColor.copy(_cBase).lerp(_cTop, lifeRatio);
+
+        fCol[i*3] = _tempColor.r;
+        fCol[i*3+1] = _tempColor.g;
+        fCol[i*3+2] = _tempColor.b;
     }
+    
     fireSystem.geometry.attributes.position.needsUpdate = true;
+    fireSystem.geometry.attributes.color.needsUpdate = true; 
 
     // 3. Animate Snow
     const sPos = snowSystem.geometry.attributes.position.array;
