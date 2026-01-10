@@ -1,0 +1,330 @@
+
+  <body>
+    <div class="grid-container">
+      
+      <header class="grid-item name-section">
+        <h1 class="fade-in">Cristiano Pinto</h1>
+        <p class="subtitle fade-in-delay">Backend Developer</p>
+      </header>
+
+      <section class="grid-item bio-section">
+        <p>
+          A developer driven by restless <strong>curiosity</strong>, I move fluidly between 
+          <strong>backend infrastructure</strong> and <strong>application design</strong>.
+          <br><br>
+          Guided by the question <strong><em>"What can I create?"</em></strong>, I use code to explore diverse 
+          domains and build reliable software, regardless of the tech stack.
+        </p>
+      </section>
+      
+      <nav class="grid-item nav-section">
+        <ul class="link-list">
+          
+          <li>
+            <a href="/projects" class="nav-link main-link">
+              <span class="link-text">Projects</span>
+              <span class="arrow">→</span>
+            </a>
+          </li>
+
+          <li>
+            <a href="mailto:you@email.com" class="nav-link main-link">
+              <span class="link-text">Contact</span>
+              <span class="arrow">→</span>
+            </a>
+          </li>
+
+          <li class="social-row">
+            
+            <a href="/resume.pdf" target="_blank" class="social-link">
+              <span>Resume</span>
+              <span class="arrow-small">↓</span>
+            </a>
+
+            <a href="https://linkedin.com/in/yourusername" target="_blank" class="social-link">
+              <span>LinkedIn</span>
+              <span class="arrow-small">↗</span>
+            </a>
+
+            <a href="https://github.com/yourusername" target="_blank" class="social-link">
+              <span>GitHub</span>
+              <span class="arrow-small">↗</span>
+            </a>
+
+          </li>
+        </ul>
+      </nav>
+
+      <footer class="grid-item footer-section">
+        <span class="status-dot"></span> Available for new opportunities
+      </footer>
+
+    </div>
+  </body>
+
+<style>
+  /* --- VARIABLES --- */
+  :root {
+    --bg-color: #050505;        /* Deepest Black */
+    --text-main: #f0f0f0;       /* Bright Silver/White */
+    --text-muted: #737373;      /* Darker Grey for contrast */
+    --border-color: rgba(255, 255, 255, 0.12); /* Steel border */
+    --accent-color: #ffffff;    /* Pure White for the "Pop" */
+    
+    --font-main: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --spacing: 40px;
+  }
+
+  /* --- RESET --- */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    font-family: var(--font-main);
+    height: 100vh;
+    overflow: hidden; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+  }
+
+  /* --- TEXTURE & LIGHTING (SILVER THEME) --- */
+  
+  /* 1. Noise Grain (Unchanged, essential for the look) */
+  body::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  /* 2. The Silver Mist Spotlight */
+  body::after {
+    content: "";
+    position: absolute;
+    top: -50%; left: -50%; width: 200%; height: 200%;
+    /* Changed from blue to a cold white/grey mist */
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.08), transparent 50%);
+    pointer-events: none;
+    z-index: -2;
+    animation: pulseLight 12s infinite alternate;
+  }
+
+  @keyframes pulseLight {
+    0% { transform: scale(1); opacity: 0.4; }
+    100% { transform: scale(1.1); opacity: 0.7; }
+  }
+
+  /* --- GRID LAYOUT --- */
+  .grid-container {
+    width: 100%;
+    height: 100%;
+    max-width: 1400px;
+    display: grid;
+    grid-template-columns: 1.5fr 1fr; 
+    grid-template-rows: 1fr 1fr 100px; 
+    border-left: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    backdrop-filter: blur(20px);
+  }
+
+  .grid-item {
+    padding: var(--spacing);
+    border-bottom: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    background: rgba(5, 5, 5, 0.5); /* Darker glass */
+  }
+
+  /* --- TYPOGRAPHY --- */
+  .name-section {
+    grid-column: 1 / 2;
+    grid-row: 1 / 3; 
+    justify-content: center;
+  }
+
+  h1 {
+    font-size: clamp(3rem, 6vw, 6.5rem);
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    /* Chrome Gradient */
+    background: linear-gradient(to bottom right, #ffffff, #666666);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    color: var(--text-muted); /* Grey instead of colored */
+    margin-top: 25px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .bio-section {
+    grid-column: 2 / 3;
+    grid-row: 1 / 2;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    line-height: 1.6;
+  }
+  
+  strong { color: var(--text-main); font-weight: 500; }
+
+  /* --- NAVIGATION --- */
+  .nav-section {
+    grid-column: 2 / 3;
+    grid-row: 2 / 3;
+    padding: 0; 
+  }
+
+  .link-list {
+    list-style: none;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .link-list li {
+    flex: 1; 
+    border-bottom: 1px solid var(--border-color);
+    display: flex; 
+  }
+  .link-list li:last-child { border-bottom: none; }
+
+  .nav-link {
+    text-decoration: none;
+    color: var(--text-main);
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 var(--spacing);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Glint Effect on Hover (White sweep) */
+  .nav-link::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.6s ease;
+  }
+
+  .nav-link:hover::before {
+    transform: translateX(100%);
+  }
+
+  .main-link {
+    font-size: 1.5rem;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+
+  .nav-link:hover .link-text {
+    transform: translateX(10px);
+    color: #fff;
+    /* White glow instead of colored */
+    text-shadow: 0 0 15px rgba(255,255,255,0.6); 
+  }
+  
+  .link-text { transition: transform 0.3s ease; }
+
+  .nav-link:hover .arrow, .nav-link:hover .arrow-small {
+    color: var(--accent-color);
+    transform: translateX(5px) scale(1.1);
+  }
+
+  .arrow { font-size: 1.2rem; transition: all 0.3s ease; color: var(--text-muted); }
+  
+  /* --- SOCIAL ROW --- */
+  .social-row { display: flex; flex-direction: row; }
+
+  .social-link {
+    flex: 1; 
+    text-decoration: none;
+    color: var(--text-muted); 
+    font-size: 0.9rem; 
+    font-family: var(--font-mono); 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    border-right: 1px solid var(--border-color);
+    background: transparent;
+  }
+
+  .social-link:last-child { border-right: none; }
+
+  .social-link:hover {
+    background-color: rgba(255,255,255,0.03);
+    color: var(--text-main);
+  }
+
+  .arrow-small { font-size: 0.8rem; transition: transform 0.3s ease; }
+
+  /* --- FOOTER --- */
+  .footer-section {
+    grid-column: 1 / 3;
+    grid-row: 3 / 4;
+    border-bottom: none;
+    border-right: none;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    font-size: 0.85rem;
+    font-family: var(--font-mono); 
+    color: var(--text-muted);
+    gap: 12px;
+  }
+
+  /* Status Dot - "Server Light" White */
+  .status-dot {
+    width: 6px; height: 6px;
+    background-color: #ffffff; /* White LED */
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+    animation: blink 3s infinite ease-in-out;
+  }
+
+  @keyframes blink { 0%, 100% { opacity: 0.8; } 50% { opacity: 0.3; } }
+
+  /* --- ANIMATIONS --- */
+  .fade-in { opacity: 0; animation: fadeIn 1s ease forwards; }
+  .fade-in-delay { opacity: 0; animation: fadeIn 1s ease 0.3s forwards; }
+
+  @keyframes fadeIn { to { opacity: 1; } }
+
+  /* --- MOBILE --- */
+  @media (max-width: 768px) {
+    .grid-container {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto auto auto;
+      border: none;
+      height: auto;
+      overflow-y: auto;
+    }
+    .name-section { grid-column: 1 / 2; grid-row: 1 / 2; padding: 60px 20px; border-right: none; }
+    h1 { font-size: 3.5rem; }
+    .bio-section { grid-column: 1 / 2; grid-row: 2 / 3; border-right: none; }
+    .nav-section { grid-column: 1 / 2; grid-row: 3 / 4; border-right: none; }
+    .nav-link { padding: 30px 20px; }
+    .footer-section { grid-column: 1 / 2; grid-row: 4 / 5; padding: 30px 20px;}
+    .social-link { padding: 25px 0; border-bottom: 1px solid var(--border-color); }
+  }
+</style>
