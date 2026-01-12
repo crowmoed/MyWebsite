@@ -1,0 +1,157 @@
+---
+import Layout from '../../layout/Layout.astro';
+
+const project = {
+  title: "HurricAIne",
+  tagline: "CNN-based hurricane trajectory prediction using ERA5 atmospheric reanalysis data.",
+  date: "2024",
+  role: "ML Engineer & Data Pipeline Architect",
+  repoUrl: "https://github.com/crowmoed/HurricAIne---Python",
+  stack: ["Python", "TensorFlow/Keras", "xarray", "ERA5 API", "Plotly", "XGBoost"]
+};
+
+const githubIcon = `
+<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+  <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.05-.015-2.07-3.345.72-4.05-1.605-4.05-1.605-.54-1.38-1.335-1.755-1.335-1.755-1.095-.75.09-.735.09-.735 1.215.09 1.845 1.245 1.845 1.245 1.08 1.845 2.835 1.305 3.525.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.225 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405 1.02 0 2.04.135 3 .405 2.295-1.545 3.3-1.23 3.3-1.23.66 1.695.24 2.925.12 3.225.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.285 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+</svg>`;
+---
+
+<Layout>
+  <div class="projects-wrapper back">
+    
+    <div class="detail-container">
+      
+      <header class="detail-header fade-in">
+        <a href="/projects" class="back-link">
+          <span class="arrow">←</span> All Projects
+        </a>
+        <h1>{project.title}</h1>
+        <p class="tagline">{project.tagline}</p>
+      </header>
+
+      <div class="content-grid fade-in-delay">
+        
+        <main class="project-body">
+          <div class="project-hero-image">
+             <div class="placeholder-overlay">Predicted vs. Actual Hurricane Trajectory Visualization</div>
+          </div>
+
+          <div class="text-content">
+            <h3>The Challenge</h3>
+            <p>
+              Hurricane trajectory prediction is notoriously difficult—chaotic atmospheric dynamics, sparse observational data over oceans, and the need for rapid forecasting all compound the problem. Traditional numerical weather prediction (NWP) models require massive computational resources and still struggle with short-term displacement accuracy. The goal: build a lightweight deep learning system that predicts 6-hour displacement vectors (Δlat, Δlon) using readily available reanalysis data.
+            </p>
+
+            <h3>Data Pipeline Architecture</h3>
+            <p>
+              The system fuses two primary data sources. <strong>ERA5 reanalysis data</strong> from ECMWF provides gridded atmospheric fields—downloaded via the CDS API as monthly NetCDF files split by product type (single-level, accumulated, pressure-level). An LRU-style cache prevents redundant disk reads. <strong>HURDAT2 best-track records</strong> supply ground-truth storm positions at 6-hour intervals, serialized as JSON indexed by timestamp.
+            </p>
+            <p>
+              For each timestep, the pipeline extracts a 70°×70° bounding box centered on the storm position. This requires handling ERA5's 0-360° longitude convention versus HURDAT's -180/180° system, plus date line crossings via <code>xr.roll()</code> with coordinate reassignment.
+            </p>
+
+            <h3>Feature Engineering</h3>
+            <p>
+              Each training sample is a <strong>(40, 40, 17)</strong> tensor constructed from:
+            </p>
+            <ul>
+              <li><strong>2D fields (5 channels):</strong> 10m wind components (u10, v10), mean sea level pressure, sea surface temperature, total column water vapor</li>
+              <li><strong>3D fields (12 channels):</strong> Wind components (u, v) and relative humidity at 4 pressure levels (200, 500, 700, 850 hPa)</li>
+            </ul>
+            <p>
+              All variables are NaN-filled, bilinearly resized to 40×40, and concatenated along the channel axis. The target is simply the 6-hour displacement: <code>next_pos - current_pos</code> in degrees.
+            </p>
+
+            <h3>CNN Architecture</h3>
+            <p>
+              The model balances parameter efficiency with expressive power:
+            </p>
+            <ul>
+              <li><strong>Separable Convolutions:</strong> Reduce parameter count for multi-channel meteorological data without sacrificing spatial feature extraction</li>
+              <li><strong>Residual Block:</strong> 1×1 shortcut projection + dual separable convs with batch norm—preserves gradient flow and allows learning identity mappings for persistent atmospheric patterns</li>
+              <li><strong>Channel Attention (SE-style):</strong> Global average pooling → Dense(64) → Dense(C, sigmoid) → channel-wise multiplication. Learns to weight variable importance dynamically (e.g., SST vs. wind shear)</li>
+              <li><strong>Spatial Attention:</strong> 1×1 conv with sigmoid activation highlights relevant storm quadrants, accounting for asymmetric hurricane structure</li>
+              <li><strong>Head:</strong> GlobalAveragePooling → Dense(128) → Dense(64) → Dense(2, linear) outputting [Δlat, Δlon]</li>
+            </ul>
+            <p>
+              Dropout (0.2–0.4) and batch normalization are applied throughout. Training uses MSE loss on z-score normalized targets, Adam optimizer with ReduceLROnPlateau and early stopping.
+            </p>
+
+            <h3>Inference & Evaluation</h3>
+            <p>
+              At inference time, the pipeline loads saved normalization statistics, constructs the feature tensor for the current timestep, forward-passes through the model, denormalizes the output, and computes predicted position as <code>current_pos + predicted_delta</code>. Error is calculated via Haversine approximation (Δ° × 111 km).
+            </p>
+            <p>
+              Visualization uses Plotly Scattermaps with a CARTO dark basemap—dual-layer rendering overlays actual tracks against predicted positions, with bubble size proportional to storm radius and color-coded by intensity (VMAX).
+            </p>
+
+            <h3>Alternative: SHIPS + XGBoost Baseline</h3>
+            <p>
+              A simpler tabular baseline uses SHIPS diagnostic files (139-line records per snapshot) with a 10-feature vector: lat, lon, vmax, mslp, sst, ocean heat content, wind shear, mid-level RH, distance to land, and maximum potential intensity. XGBoost regresses on 24-hour deltas. This provides a non-spatial baseline for comparison—faster training, no GPU required, but loses the gridded spatial structure that the CNN exploits.
+            </p>
+
+            <h3>Technical Constraints Handled</h3>
+            <ul>
+              <li><strong>Zero-dimension tensors:</strong> Explicit shape validation before TensorFlow resize operations</li>
+              <li><strong>Storm ID mismatch:</strong> Filtering ensures consecutive timesteps belong to the same storm system</li>
+              <li><strong>Memory management:</strong> ERA5 cache cleared after each storm to prevent file handle exhaustion</li>
+              <li><strong>Coordinate systems:</strong> Longitude sign conventions reconciled between data sources in both slicing and rendering</li>
+            </ul>
+          </div>
+        </main>
+
+        <aside class="project-sidebar">
+          
+          <div class="meta-block">
+            <span class="meta-label">Role</span>
+            <span class="meta-value">{project.role}</span>
+          </div>
+
+          <div class="meta-block">
+            <span class="meta-label">Timeline</span>
+            <span class="meta-value">{project.date}</span>
+          </div>
+
+          <div class="meta-block">
+            <span class="meta-label">Technologies</span>
+            <div class="tech-stack-wrap">
+              {project.stack.map(tech => (
+                <span class="tech-tag">{tech}</span>
+              ))}
+            </div>
+          </div>
+
+          <div class="meta-block">
+            <span class="meta-label">Data Sources</span>
+            <div class="tech-stack-wrap">
+              <span class="tech-tag">ERA5 Reanalysis</span>
+              <span class="tech-tag">HURDAT2</span>
+              <span class="tech-tag">NOAA OISST</span>
+              <span class="tech-tag">SHIPS Diagnostics</span>
+            </div>
+          </div>
+
+          <div class="meta-block">
+            <span class="meta-label">Model Output</span>
+            <span class="meta-value">6-hour displacement vector (Δlat, Δlon)</span>
+          </div>
+
+          <div class="meta-block">
+            <span class="meta-label">Input Tensor</span>
+            <span class="meta-value">(40, 40, 17) — 17 atmospheric channels</span>
+          </div>
+
+          <div class="action-buttons">
+            <a href={project.repoUrl} target="_blank" class="action-btn outline">
+              <span class="icon" set:html={githubIcon} />
+              View Code
+            </a>
+          </div>
+
+        </aside>
+
+      </div>
+
+    </div>
+  </div>
+</Layout>

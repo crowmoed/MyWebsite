@@ -1,0 +1,148 @@
+---
+import Layout from '../../layout/Layout.astro';
+
+const project = {
+  title: "Web Scraper",
+  tagline: "Dual-target fanfiction scraping system with two-stage content filtering via keyword matching and local LLM classification.",
+  date: "2024",
+  role: "Developer",
+  repoUrl: "https://github.com/crowmoed/Webscraper---Python",
+  stack: ["Python", "SeleniumBase", "Ollama", "Google Sheets API", "gspread"]
+};
+
+const githubIcon = `
+<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+  <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.05-.015-2.07-3.345.72-4.05-1.605-4.05-1.605-.54-1.38-1.335-1.755-1.335-1.755-1.095-.75.09-.735.09-.735 1.215.09 1.845 1.245 1.845 1.245 1.08 1.845 2.835 1.305 3.525.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.225 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405 1.02 0 2.04.135 3 .405 2.295-1.545 3.3-1.23 3.3-1.23.66 1.695.24 2.925.12 3.225.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.285 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+</svg>`;
+---
+
+<Layout>
+  <div class="projects-wrapper back">
+    
+    <div class="detail-container">
+      
+      <header class="detail-header fade-in">
+        <a href="/projects" class="back-link">
+          <span class="arrow">←</span> All Projects
+        </a>
+        <h1>{project.title}</h1>
+        <p class="tagline">{project.tagline}</p>
+      </header>
+
+      <div class="content-grid fade-in-delay">
+        
+        <main class="project-body">
+          <div class="project-hero-image">
+             <div class="placeholder-overlay">Content Filtering Pipeline</div>
+          </div>
+
+          <div class="text-content">
+            <h3>Overview</h3>
+            <p>
+              This project automates the discovery of fanfiction stories matching specific criteria across Archive of Our Own (AO3) and FanFiction.net. It combines browser automation for content extraction with a two-stage filtering pipeline—fast keyword matching followed by local LLM classification—to surface relevant stories and log them to Google Sheets.
+            </p>
+
+            <h3>Two-Stage Filtering Pipeline</h3>
+            <p>
+              The system uses a tiered approach to content filtering that balances speed with accuracy:
+            </p>
+            <ul>
+              <li><strong>Stage 1 - Keyword Filter:</strong> Case-insensitive substring matching against story summaries. Stories without target keywords are immediately skipped, avoiding expensive LLM inference for obviously irrelevant content.</li>
+              <li><strong>Stage 2 - LLM Analysis:</strong> Stories passing the keyword filter are sent to a local Ollama instance for semantic classification. The LLM evaluates whether the story actually matches the search criteria and returns a binary True/False decision.</li>
+            </ul>
+            <p>
+              This two-tier approach significantly improves throughput—keyword filtering handles the bulk of rejections instantly, while LLM inference is reserved for stories that need deeper analysis.
+            </p>
+
+            <h3>Browser Automation</h3>
+            <p>
+              The scraper uses SeleniumBase in undetected-chromedriver mode to navigate target sites. This handles bot detection systems that would block standard Selenium requests. Key features include:
+            </p>
+            <ul>
+              <li><strong>CAPTCHA Handling:</strong> Automatic CAPTCHA solving via <code>uc_gui_click_captcha()</code></li>
+              <li><strong>Resilient Page Loading:</strong> <code>uc_open_with_reconnect()</code> provides retry logic for flaky connections</li>
+              <li><strong>DOM Extraction:</strong> CSS selector-based traversal pulls titles and summaries from each listing page</li>
+            </ul>
+
+            <h3>Site-Specific Implementations</h3>
+            <p>
+              Each target site has its own scraper module with customized selectors and URL parameters:
+            </p>
+            <ul>
+              <li><strong>AO3:</strong> Filters by fandom tag, minimum word count (80k+), sorted by revision date. Extracts from <code>div.header.module</code> and <code>.userstuff.summary</code> selectors.</li>
+              <li><strong>FanFiction.net:</strong> Filters by rating, length threshold, and language. Uses <code>.stitle</code> and <code>.z-indent.z-padtop</code> selectors for content extraction.</li>
+            </ul>
+
+            <h3>Local LLM Integration</h3>
+            <p>
+              Classification runs through Ollama, enabling fully local inference without API rate limits or costs. The system supports multiple models (phi4, phi4-mini, deepseek-r1:14b) with temperature set to 0 for deterministic outputs. A prompt template instructs the model to respond with a single-word True/False answer, which is parsed directly from the response.
+            </p>
+
+            <h3>Data Persistence</h3>
+            <p>
+              Matching stories are logged to Google Sheets via the gspread library. OAuth2 service account authentication connects to the target spreadsheet, and each match appends a row containing title, summary, page number, and URL. This provides a human-readable output for manual review and further curation.
+            </p>
+
+            <h3>Pagination & Flow Control</h3>
+            <p>
+              The scraper supports configurable page ranges for resumable operation. Start and end pages are set via constants, allowing interrupted scrapes to continue from where they left off. Each page load includes CAPTCHA handling before content extraction begins.
+            </p>
+          </div>
+        </main>
+
+        <aside class="project-sidebar">
+          
+          <div class="meta-block">
+            <span class="meta-label">Role</span>
+            <span class="meta-value">{project.role}</span>
+          </div>
+
+          <div class="meta-block">
+            <span class="meta-label">Timeline</span>
+            <span class="meta-value">{project.date}</span>
+          </div>
+
+          <div class="meta-block">
+            <span class="meta-label">Technologies</span>
+            <div class="tech-stack-wrap">
+              {project.stack.map(tech => (
+                <span class="tech-tag">{tech}</span>
+              ))}
+            </div>
+          </div>
+
+          <div class="meta-block">
+            <span class="meta-label">Features</span>
+            <div class="tech-stack-wrap">
+              <span class="tech-tag">Two-Stage Filtering</span>
+              <span class="tech-tag">Local LLM Classification</span>
+              <span class="tech-tag">CAPTCHA Handling</span>
+              <span class="tech-tag">Google Sheets Export</span>
+              <span class="tech-tag">Resumable Scraping</span>
+            </div>
+          </div>
+
+          <div class="meta-block">
+            <span class="meta-label">Target Sites</span>
+            <span class="meta-value">Archive of Our Own, FanFiction.net</span>
+          </div>
+
+          <div class="meta-block">
+            <span class="meta-label">LLM Backend</span>
+            <span class="meta-value">Ollama (phi4, deepseek-r1)</span>
+          </div>
+
+          <div class="action-buttons">
+            <a href={project.repoUrl} target="_blank" class="action-btn outline">
+              <span class="icon" set:html={githubIcon} />
+              View Code
+            </a>
+          </div>
+
+        </aside>
+
+      </div>
+
+    </div>
+  </div>
+</Layout>

@@ -1,0 +1,139 @@
+---
+import Layout from '../../layout/Layout.astro';
+
+const project = {
+  title: "Calendar Notes",
+  tagline: "Month-view calendar application with per-day note-taking and flat-file persistence.",
+  date: "2024",
+  role: "Developer",
+  repoUrl: "https://github.com/crowmoed/Calendar-Notes-App---Python",
+  stack: ["Python", "CustomTkinter", "datetime", "File I/O"]
+};
+
+const githubIcon = `
+<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+  <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.05-.015-2.07-3.345.72-4.05-1.605-4.05-1.605-.54-1.38-1.335-1.755-1.335-1.755-1.095-.75.09-.735.09-.735 1.215.09 1.845 1.245 1.845 1.245 1.08 1.845 2.835 1.305 3.525.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.225 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405 1.02 0 2.04.135 3 .405 2.295-1.545 3.3-1.23 3.3-1.23.66 1.695.24 2.925.12 3.225.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.285 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+</svg>`;
+---
+
+<Layout>
+  <div class="projects-wrapper back">
+    
+    <div class="detail-container">
+      
+      <header class="detail-header fade-in">
+        <a href="/projects" class="back-link">
+          <span class="arrow">←</span> All Projects
+        </a>
+        <h1>{project.title}</h1>
+        <p class="tagline">{project.tagline}</p>
+      </header>
+
+      <div class="content-grid fade-in-delay">
+        
+        <main class="project-body">
+          <div class="project-hero-image">
+             <div class="placeholder-overlay">Month View Calendar Interface</div>
+          </div>
+
+          <div class="text-content">
+            <h3>Overview</h3>
+            <p>
+              Calendar Notes is a desktop calendar application built with CustomTkinter that provides a clean month-view interface with integrated note-taking. Each day is clickable, opening a text editor where notes are saved automatically to local files. The app features multi-month navigation, today highlighting, and persistent storage.
+            </p>
+
+            <h3>Calendar Rendering</h3>
+            <p>
+              The calendar displays a full month grid using Tkinter's grid geometry manager. The rendering system calculates the first day of the month to determine proper column alignment—Sunday through Saturday positioning—then populates day buttons across the appropriate rows. Days are rendered as interactive buttons within styled frames, creating a clean visual hierarchy.
+            </p>
+            <p>
+              The current day is automatically highlighted with a distinct color, making it easy to identify today at a glance.
+            </p>
+
+            <h3>Month Navigation</h3>
+            <p>
+              Navigation buttons allow jumping forward or backward by one or two months. Each navigation action recalculates the calendar layout—determining the new month's day count via <code>monthrange()</code> and the starting weekday position. The interface updates dynamically, showing the correct number of days and proper alignment for each month.
+            </p>
+            <p>
+              Navigation labels display the target month names, so you always know where you're headed before clicking.
+            </p>
+
+            <h3>Note-Taking System</h3>
+            <p>
+              Clicking any day opens a note editor with a full-size text box. The system automatically loads any existing note for that date, or creates a new file if none exists. Notes are saved back to disk when you confirm, preserving your content between sessions.
+            </p>
+            <p>
+              The editor provides a simple, distraction-free writing environment focused on quick capture of daily notes, reminders, or journal entries.
+            </p>
+
+            <h3>File-Based Persistence</h3>
+            <p>
+              Notes are stored as plain text files in a local <code>./data/</code> directory. Each file is named by date (year, month, day), making it easy to locate and back up your notes outside the app. The directory is created automatically on first use.
+            </p>
+            <p>
+              This flat-file approach keeps the app simple and portable—no database setup required, and your data remains in human-readable format.
+            </p>
+
+            <h3>User Interface</h3>
+            <p>
+              The app uses CustomTkinter for a modernized look over standard Tkinter. The interface includes a login screen, main menu with calendar and settings options, and the full calendar view with navigation controls. State transitions between screens clear and rebuild the UI, providing clean visual separation between app sections.
+            </p>
+          </div>
+        </main>
+
+        <aside class="project-sidebar">
+          
+          <div class="meta-block">
+            <span class="meta-label">Role</span>
+            <span class="meta-value">{project.role}</span>
+          </div>
+
+          <div class="meta-block">
+            <span class="meta-label">Timeline</span>
+            <span class="meta-value">{project.date}</span>
+          </div>
+
+          <div class="meta-block">
+            <span class="meta-label">Technologies</span>
+            <div class="tech-stack-wrap">
+              {project.stack.map(tech => (
+                <span class="tech-tag">{tech}</span>
+              ))}
+            </div>
+          </div>
+
+          <div class="meta-block">
+            <span class="meta-label">Features</span>
+            <div class="tech-stack-wrap">
+              <span class="tech-tag">Month View Calendar</span>
+              <span class="tech-tag">Per-Day Notes</span>
+              <span class="tech-tag">Today Highlighting</span>
+              <span class="tech-tag">Multi-Month Navigation</span>
+              <span class="tech-tag">Flat-File Storage</span>
+            </div>
+          </div>
+
+          <div class="meta-block">
+            <span class="meta-label">UI Framework</span>
+            <span class="meta-value">CustomTkinter</span>
+          </div>
+
+          <div class="meta-block">
+            <span class="meta-label">Storage</span>
+            <span class="meta-value">Plain text files (./data/)</span>
+          </div>
+
+          <div class="action-buttons">
+            <a href={project.repoUrl} target="_blank" class="action-btn outline">
+              <span class="icon" set:html={githubIcon} />
+              View Code
+            </a>
+          </div>
+
+        </aside>
+
+      </div>
+
+    </div>
+  </div>
+</Layout>
