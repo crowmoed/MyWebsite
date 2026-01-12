@@ -1,7 +1,6 @@
 ---
 import '../style.css';
 ---
-
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -12,17 +11,21 @@ import '../style.css';
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
     
     <style is:global>
-      /* The container that will fade */
-      .transition-fade {
-        transition: opacity 0.4s ease-in-out;
-        opacity: 1;
-      }
-      
-      /* The state while Swup is loading the next page */
-      html.is-animating .transition-fade {
-        opacity: 0;
-      }
-    </style>
+  .transition-fade {
+    transition: opacity 0.4s ease-in-out, backdrop-filter 0.4s ease-in-out;
+    
+    opacity: 1;
+    backdrop-filter: blur(10px); 
+    -webkit-backdrop-filter: blur(10px); 
+  }
+  
+  html.is-animating .transition-fade {
+    opacity: 0;
+    
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+</style>
   </head>
   
   <body>
@@ -30,12 +33,16 @@ import '../style.css';
     <script type="module" src="/src/main.js"></script>
 
     <main id="swup" class="transition-fade">
-
+      <div class="grid-container ">
+      <slot/>
+      </div>
     </main>
 
     <script>
       import Swup from 'swup';
-      const swup = new Swup();
+      const swup = new Swup({
+      animationSelector: '[class*="transition-fade"]' 
+    });
     </script>
 
   </body>

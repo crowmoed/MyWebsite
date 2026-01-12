@@ -1,8 +1,6 @@
 ---
-// src/pages/projects.astro
 import Layout from '../layout/Layout.astro';
 
-// Define the GitHub Icon here once to keep the code clean
 const githubIcon = `
 <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
   <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.05-.015-2.07-3.345.72-4.05-1.605-4.05-1.605-.54-1.38-1.335-1.755-1.335-1.755-1.095-.75.09-.735.09-.735 1.215.09 1.845 1.245 1.845 1.245 1.08 1.845 2.835 1.305 3.525.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.225 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405 1.02 0 2.04.135 3 .405 2.295-1.545 3.3-1.23 3.3-1.23.66 1.695.24 2.925.12 3.225.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.285 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
@@ -10,7 +8,7 @@ const githubIcon = `
 ---
 
 <Layout>
-  <div class="projects-wrapper">
+  <div class="projects-wrapper back">
     
     <header class="projects-header">
       <a href="/" class="back-link">
@@ -113,126 +111,6 @@ const githubIcon = `
       </article>
 
     </div>
-  </div>
 </Layout>
 
 
-
-
-<style>
-  .project-card p {
-    font-size: 1.05rem;
-    line-height: 1.6;
-    color: rgba(173, 173, 173, 0.8);
-  }
-/* --- CARD LINKS --- */
-.card-links {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: auto;
-  padding-top: 25px;
-}
-
-/* "Read More" -> Rounded Square */
-.read-more {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  
-  border: 1px solid rgba(255, 255, 255, 0.582);
-  border-radius: 8px;
-  padding: 10px 16px;
-  
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--text-main);
-  text-decoration: none;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  
-  transition: all 0.3s ease;
-}
-
-.read-more:hover {
-  border-color: var(--text-main);
-  color: var(--text-main);
-  background: rgba(255, 255, 255, 0.05);
-}
-
-/* GitHub -> Circle */
-.github-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  
-  width: 38px;
-  height: 38px;
-  
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  
-  color: var(--text-muted);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.github-icon:hover {
-  border-color: var(--text-main);
-  color: #fff;
-  background: rgba(255, 255, 255, 0.05);
-  transform: rotate(10deg);
-}
-@media (max-width: 768px) {
-  .card-links {
-    gap: 16px;
-  }
-  
-  .read-more {
-    padding: 18px 28px;
-    font-size: 0.95rem;
-    color: rgba(255, 255, 255, 0.85);
-    font-weight: 600;
-  }
-  
-  .github-icon {
-    width: 58px;
-    height: 58px;
-    color: rgba(255, 255, 255, 0.85);
-  }
-  
-  .github-icon svg {
-    width: 30px;
-    height: 30px;
-  }
-
-  /* Page header */
-  .projects-header h1 {
-    font-size: 2.5rem;
-  }
-
-  /* Card titles */
-  .project-card h3 {
-    font-size: 1.5rem;
-  }
-
-  /* Card descriptions */
-  .project-card p {
-    font-size: 1.05rem;
-    line-height: 1.6;
-    color: rgba(255, 255, 255, 0.8);
-  }
-
-  /* Tech stack tags */
-  .tech-stack span {
-    font-size: 0.85rem;
-    padding: 6px 12px;
-  }
-
-  /* Back link */
-  .back-link {
-    font-size: 1rem;
-  }
-
-}
-</style>
