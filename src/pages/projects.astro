@@ -53,7 +53,7 @@ const githubIcon = `
         </div>
         
         <div class="card-links">
-          <a href="/projects/myth-and-metal" class="read-more">Read More <span class="arrow-icon">→</span></a>
+          <a href="/projects/fakeproject" class="read-more">Read More <span class="arrow-icon">→</span></a>
           <a href="https://github.com/yourusername/myth-metal" target="_blank" class="github-icon" aria-label="GitHub" set:html={githubIcon} />
         </div>
       </article>
@@ -116,7 +116,15 @@ const githubIcon = `
   </div>
 </Layout>
 
+
+
+
 <style>
+  .project-card p {
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: rgba(173, 173, 173, 0.8);
+  }
 /* --- CARD LINKS --- */
 .card-links {
   display: flex;
@@ -132,14 +140,14 @@ const githubIcon = `
   align-items: center;
   gap: 10px;
   
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.582);
   border-radius: 8px;
   padding: 10px 16px;
   
   font-family: var(--font-mono);
   font-size: 0.75rem;
   font-weight: 500;
-  color: var(--text-muted);
+  color: var(--text-main);
   text-decoration: none;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -174,5 +182,57 @@ const githubIcon = `
   color: #fff;
   background: rgba(255, 255, 255, 0.05);
   transform: rotate(10deg);
+}
+@media (max-width: 768px) {
+  .card-links {
+    gap: 16px;
+  }
+  
+  .read-more {
+    padding: 18px 28px;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 600;
+  }
+  
+  .github-icon {
+    width: 58px;
+    height: 58px;
+    color: rgba(255, 255, 255, 0.85);
+  }
+  
+  .github-icon svg {
+    width: 30px;
+    height: 30px;
+  }
+
+  /* Page header */
+  .projects-header h1 {
+    font-size: 2.5rem;
+  }
+
+  /* Card titles */
+  .project-card h3 {
+    font-size: 1.5rem;
+  }
+
+  /* Card descriptions */
+  .project-card p {
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  /* Tech stack tags */
+  .tech-stack span {
+    font-size: 0.85rem;
+    padding: 6px 12px;
+  }
+
+  /* Back link */
+  .back-link {
+    font-size: 1rem;
+  }
+
 }
 </style>

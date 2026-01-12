@@ -1,0 +1,357 @@
+---
+import Layout from '../../layout/Layout.astro';
+
+// Example Data (Replace with props or database fetch if moving to dynamic routing)
+const project = {
+  title: "HurricAIne",
+  tagline: "Deep learning system for predicting 6-hour hurricane displacement vectors.",
+  date: "October 2023",
+  role: "Lead Researcher & Developer",
+  repoUrl: "https://github.com/yourusername/hurricaine",
+  demoUrl: "#", // Optional
+  stack: ["Python", "TensorFlow", "CNN", "ERA5", "Matplotlib"]
+};
+
+// Reusing your GitHub Icon [cite: 1]
+const githubIcon = `
+<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+  <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.05-.015-2.07-3.345.72-4.05-1.605-4.05-1.605-.54-1.38-1.335-1.755-1.335-1.755-1.095-.75.09-.735.09-.735 1.215.09 1.845 1.245 1.845 1.245 1.08 1.845 2.835 1.305 3.525.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.225 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405 1.02 0 2.04.135 3 .405 2.295-1.545 3.3-1.23 3.3-1.23.66 1.695.24 2.925.12 3.225.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.285 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+</svg>`;
+---
+
+<Layout>
+  <div class="projects-wrapper">
+    
+    <div class="detail-container">
+      
+      <header class="detail-header fade-in">
+        <a href="/projects" class="back-link">
+          <span class="arrow">←</span> All Projects
+        </a>
+        <h1>{project.title}</h1>
+        <p class="tagline">{project.tagline}</p>
+      </header>
+
+      <div class="content-grid fade-in-delay">
+        
+        <main class="project-body">
+          <div class="project-hero-image">
+             <div class="placeholder-overlay">Project Preview Image</div>
+          </div>
+
+          <div class="text-content">
+            <h3>The Challenge</h3>
+            <p>
+              Accurately predicting hurricane trajectory remains one of meteorology's most complex challenges due to the chaotic nature of atmospheric data. The goal was to utilize historical ERA5 reanalysis data to train a model capable of short-term vector prediction.
+            </p>
+
+            <h3>The Solution</h3>
+            <p>
+              I engineered a Convolutional Neural Network (CNN) pipeline that ingests gridded atmospheric pressure and wind velocity fields. The system processes these as multi-channel images, identifying cyclonic patterns that traditional regression models often miss.
+            </p>
+            
+            <h3>Key Features</h3>
+            <ul>
+              <li>6-hour displacement vector prediction</li>
+              <li>Processing of 40 years of ERA5 data</li>
+              <li>Custom data loader for NetCDF formats</li>
+              <li>Visualizer for predicted vs. actual paths</li>
+            </ul>
+          </div>
+        </main>
+
+        <aside class="project-sidebar">
+          
+          <div class="meta-block">
+            <span class="meta-label">Role</span>
+            <span class="meta-value">{project.role}</span>
+          </div>
+
+          <div class="meta-block">
+            <span class="meta-label">Timeline</span>
+            <span class="meta-value">{project.date}</span>
+          </div>
+
+          <div class="meta-block">
+            <span class="meta-label">Technologies</span>
+            <div class="tech-stack-wrap">
+              {project.stack.map(tech => (
+                <span class="tech-tag">{tech}</span>
+              ))}
+            </div>
+          </div>
+
+          <div class="action-buttons">
+            <a href={project.repoUrl} target="_blank" class="action-btn outline">
+              <span class="icon" set:html={githubIcon} />
+              View Code
+            </a>
+            </div>
+
+        </aside>
+
+      </div>
+      
+      <footer class="detail-footer">
+        <a href="#" class="next-project-link">
+          <span class="label">Next Project</span>
+          <span class="title">Myth & Metal <span class="arrow">→</span></span>
+        </a>
+      </footer>
+
+    </div>
+  </div>
+</Layout>
+
+<style>
+  /* --- LAYOUT --- */
+  .detail-container {
+    width: 100%;
+    max-width: 1100px; /* Slightly tighter than the main grid for readability */
+    margin: 0 auto;
+    padding-bottom: 100px;
+  }
+
+  .content-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* 2/3 Content, 1/3 Sidebar */
+    gap: 60px;
+    margin-top: 40px;
+  }
+
+  /* --- HEADER --- */
+  .detail-header {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 40px;
+  }
+  
+  .detail-header h1 {
+    font-size: 3.5rem;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    /* Chrome Gradient from style.css  */
+    background: linear-gradient(to bottom right, #ffffff, #888888);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .tagline {
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    max-width: 800px;
+    line-height: 1.6;
+  }
+
+  /* --- HERO IMAGE --- */
+  .project-hero-image {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    margin-bottom: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .placeholder-overlay {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* --- TYPOGRAPHY (BODY) --- */
+  .text-content h3 {
+    font-size: 1.5rem;
+    color: var(--text-main);
+    margin-top: 40px;
+    margin-bottom: 20px;
+    font-weight: 500;
+  }
+  
+  .text-content h3:first-child { margin-top: 0; }
+
+  .text-content p {
+    font-size: 1.05rem;
+    line-height: 1.8;
+    color: #b0b0b0; /* Slightly brighter than muted for reading */
+    margin-bottom: 20px;
+  }
+
+  .text-content ul {
+    list-style: none;
+    margin-bottom: 20px;
+    padding-left: 10px;
+  }
+
+  .text-content li {
+    position: relative;
+    padding-left: 25px;
+    margin-bottom: 10px;
+    color: #b0b0b0;
+    line-height: 1.6;
+  }
+
+  .text-content li::before {
+    content: "→";
+    position: absolute;
+    left: 0;
+    color: var(--border-color); /* Subtle arrow */
+  }
+
+  /* --- SIDEBAR --- */
+  .project-sidebar {
+    position: sticky;
+    top: 40px; /* Sticks when scrolling */
+    height: fit-content;
+    padding: 30px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(5px);
+  }
+
+  .meta-block {
+    margin-bottom: 30px;
+  }
+
+  .meta-label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    letter-spacing: 0.05em;
+  }
+
+  .meta-value {
+    display: block;
+    font-size: 1rem;
+    color: var(--text-main);
+  }
+
+  /* Tag Styling similar to cards but adaptable [cite: 3] */
+  .tech-stack-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .tech-tag {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border: 1px solid var(--border-color);
+    color: #ccc;
+    background: rgba(0,0,0,0.3);
+  }
+
+  /* --- BUTTONS --- */
+  .action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 40px;
+  }
+
+  .action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 20px;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .action-btn.outline {
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+  }
+
+  .action-btn.outline:hover {
+    border-color: var(--text-main);
+    background: rgba(255,255,255,0.05);
+  }
+
+  /* --- FOOTER NAV --- */
+  .detail-footer {
+    margin-top: 80px;
+    padding-top: 40px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .next-project-link {
+    text-decoration: none;
+    text-align: right;
+    group: hover;
+  }
+
+  .next-project-link .label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+  }
+
+  .next-project-link .title {
+    font-size: 1.2rem;
+    color: var(--text-main);
+    transition: color 0.3s ease;
+  }
+
+  .next-project-link:hover .title {
+    color: #fff;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
+  }
+
+  /* --- MOBILE RESPONSIVE --- */
+  @media (max-width: 768px) {
+    .content-grid {
+      grid-template-columns: 1fr; /* Stack into single column */
+      gap: 40px;
+    }
+
+    /* Move sidebar (metadata) to appear AFTER the intro but BEFORE the body? 
+       Or just standard stacking. Standard stacking puts sidebar below main content. 
+       Use order property if you want metadata first. */
+    .project-sidebar {
+      order: -1; /* Puts metadata above the long text description on mobile */
+      position: static; /* Removes sticky behavior on mobile */
+      margin-bottom: 20px;
+      padding: 20px;
+    }
+
+    .detail-header h1 {
+      font-size: 2.5rem; /* Smaller H1 for mobile */
+    }
+
+    .project-hero-image {
+      aspect-ratio: 4 / 3; /* Taller image on mobile */
+    }
+    
+    .action-buttons {
+      flex-direction: row; /* Side by side buttons on mobile looks better */
+    }
+    
+    .action-btn {
+      flex: 1;
+    }
+  }
+</style>

@@ -1,3 +1,5 @@
+
+
 canvas {
     position: fixed;
     top: 0;
@@ -33,11 +35,11 @@ canvas {
 
   /* --- TEXTURE & LIGHTING (SILVER THEME) --- */
   
-  /* 1. Noise Grain (Unchanged, essential for the look) */
+  /* 1. Noise Grain */
   body::before {
     content: "";
     position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
+    top: 0; left: 0; width: 100%; height: 100%; opacity: 40%;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
     pointer-events: none;
     z-index: -1;
@@ -48,11 +50,10 @@ canvas {
     content: "";
     position: absolute;
     top: -50%; left: -50%; width: 200%; height: 200%;
-    /* Changed from blue to a cold white/grey mist */
     background: radial-gradient(circle at center, rgba(255, 255, 255, 0.08), transparent 50%);
     pointer-events: none;
     z-index: -2;
-    animation: pulseLight 12s infinite alternate;
+    animation: pulseLight 30s infinite alternate;
   }
 
   @keyframes pulseLight {
@@ -105,7 +106,7 @@ canvas {
   .subtitle {
     font-family: var(--font-mono);
     font-size: 1rem;
-    color: var(--text-muted); /* Grey instead of colored */
+    color: var(--text-muted);
     margin-top: 25px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -178,7 +179,6 @@ canvas {
   .nav-link:hover .link-text {
     transform: translateX(10px);
     color: #fff;
-    /* White glow instead of colored */
     text-shadow: 0 0 15px rgba(255,255,255,0.6); 
   }
   
@@ -250,7 +250,7 @@ canvas {
 
   @keyframes fadeIn { to { opacity: 1; } }
 
-  /* --- MOBILE --- */
+  /* --- GLOBAL MOBILE --- */
   @media (max-width: 768px) {
     .grid-container {
       grid-template-columns: 1fr;
@@ -275,19 +275,14 @@ canvas {
     .nav-link { padding: 30px 20px; }
     .footer-section { grid-column: 1 / 2; grid-row: 4 / 5; padding: 30px 20px;}
     .social-link { padding: 25px 0; border-bottom: 1px solid var(--border-color); }
-
-    
-    
   }
 
 
 /* =========================================
-   PROJECTS PAGE EXPANSION
+   PROJECTS LIST PAGE EXPANSION
    ========================================= */
 
-/* Overrides the body's 'display: flex' centering and 'overflow: hidden'
-   by creating a full-screen scrollable container.
-*/
+/* Overrides the body's 'display: flex' centering and 'overflow: hidden' */
 .projects-wrapper {
   position: absolute;
   top: 0;
@@ -299,7 +294,7 @@ canvas {
   display: flex;
   flex-direction: column;
   align-items: center;
-  z-index: 10; /* Ensures it sits above background effects */
+  z-index: 10;
   scrollbar-width: thin;
   scrollbar-color: var(--border-color) transparent;
 }
@@ -312,7 +307,7 @@ canvas {
   border-radius: 3px;
 }
 
-/* --- HEADER SECTION --- */
+/* --- HEADER SECTION (LIST) --- */
 .projects-header {
   width: 100%;
   max-width: 1200px;
@@ -320,7 +315,6 @@ canvas {
   position: relative;
 }
 
-/* Reusing the H1 style, but ensuring it stacks correctly */
 .projects-header h1 {
   margin-top: 20px;
 }
@@ -343,14 +337,14 @@ canvas {
   transform: translateX(-5px);
 }
 
-/* --- GRID LAYOUT --- */
+/* --- GRID LAYOUT (LIST) --- */
 .projects-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 30px;
   width: 100%;
   max-width: 1200px;
-  padding-bottom: 100px; /* Space at bottom for scrolling */
+  padding-bottom: 100px; 
 }
 
 /* --- CARD DESIGN --- */
@@ -367,14 +361,12 @@ canvas {
   overflow: hidden;
 }
 
-/* Hover Effect: Glow and lift */
 .project-card:hover {
   border-color: rgba(255, 255, 255, 0.3);
-  transform: translateY(0x);
+  transform: translateY(0px);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
 }
 
-/* Subtle sweep effect on hover (matching nav links) */
 .project-card::before {
   content: '';
   position: absolute;
@@ -403,7 +395,7 @@ canvas {
   margin-bottom: 25px;
 }
 
-/* --- TECH STACK TAGS --- */
+/* --- TECH STACK TAGS (LIST) --- */
 .tech-stack {
   display: flex;
   flex-wrap: wrap;
@@ -417,7 +409,7 @@ canvas {
   color: var(--text-muted);
   border: 1px solid var(--border-color);
   padding: 6px 12px;
-  border-radius: 2px; /* Slight rounding or keep 0 for strict look */
+  border-radius: 2px;
   background: rgba(255, 255, 255, 0.02);
   transition: all 0.3s ease;
 }
@@ -430,29 +422,57 @@ canvas {
 /* --- CARD LINKS --- */
 .card-links {
   display: flex;
-  gap: 20px;
-  margin-top: auto; /* Pushes links to bottom */
-  padding-top: 20px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 25px;
   border-top: 1px solid var(--border-color);
+  gap: 20px;
 }
 
-.card-links a {
+.card-links a.read-more {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.582);
+  border-radius: 8px;
+  padding: 10px 16px;
   font-family: var(--font-mono);
-  font-size: 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 500;
   color: var(--text-main);
   text-decoration: none;
-  opacity: 0.7;
-  transition: opacity 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.3s ease;
 }
 
-.card-links a:hover {
-  opacity: 1;
-  text-decoration: none;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 4px;
+.card-links a.read-more:hover {
+  border-color: var(--text-main);
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.05);
 }
 
-/* --- RESPONSIVE FOR PROJECTS --- */
+.github-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  color: var(--text-muted);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.github-icon:hover {
+  border-color: var(--text-main);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  transform: rotate(10deg);
+}
+
+/* --- RESPONSIVE PROJECTS LIST --- */
 @media (max-width: 768px) {
   .projects-wrapper {
     padding: 60px 20px;
@@ -465,6 +485,32 @@ canvas {
   .projects-header h1 {
     font-size: 3rem; 
   }
+
+  .card-links {
+    gap: 16px;
+  }
+  
+  .read-more {
+    padding: 18px 28px;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 600;
+  }
+  
+  .github-icon {
+    width: 58px;
+    height: 58px;
+    color: rgba(255, 255, 255, 0.85);
+  }
+  
+  .github-icon svg {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .project-card h3 { font-size: 1.5rem; }
+  .project-card p { font-size: 1.05rem; line-height: 1.6; color: rgba(255, 255, 255, 0.8); }
+  .tech-stack span { font-size: 0.85rem; padding: 6px 12px; }
 }
 
   #swup {
@@ -473,3 +519,253 @@ canvas {
     max-width: 1400px;
   }
 
+
+/* =========================================
+   PROJECT DETAIL PAGE (NEW)
+   ========================================= */
+
+  /* --- LAYOUT DETAIL --- */
+  .detail-container {
+    width: 100%;
+    max-width: 1100px; 
+    margin: 0 auto;
+    padding-bottom: 100px;
+  }
+
+  .content-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* 2/3 Content, 1/3 Sidebar */
+    gap: 60px;
+    margin-top: 40px;
+  }
+
+  /* --- HEADER DETAIL --- */
+  .detail-header {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 40px;
+  }
+  
+  .detail-header h1 {
+    font-size: 3.5rem;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    background: linear-gradient(to bottom right, #ffffff, #888888);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .tagline {
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    max-width: 800px;
+    line-height: 1.6;
+  }
+
+  /* --- HERO IMAGE DETAIL --- */
+  .project-hero-image {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    margin-bottom: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .placeholder-overlay {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* --- TEXT CONTENT DETAIL --- */
+  .text-content h3 {
+    font-size: 1.5rem;
+    color: var(--text-main);
+    margin-top: 40px;
+    margin-bottom: 20px;
+    font-weight: 500;
+  }
+  
+  .text-content h3:first-child { margin-top: 0; }
+
+  .text-content p {
+    font-size: 1.05rem;
+    line-height: 1.8;
+    color: #b0b0b0; 
+    margin-bottom: 20px;
+  }
+
+  .text-content ul {
+    list-style: none;
+    margin-bottom: 20px;
+    padding-left: 10px;
+  }
+
+  .text-content li {
+    position: relative;
+    padding-left: 25px;
+    margin-bottom: 10px;
+    color: #b0b0b0;
+    line-height: 1.6;
+  }
+
+  .text-content li::before {
+    content: "→";
+    position: absolute;
+    left: 0;
+    color: var(--border-color); 
+  }
+
+  /* --- SIDEBAR DETAIL --- */
+  .project-sidebar {
+    position: sticky;
+    top: 40px; 
+    height: fit-content;
+    padding: 30px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(5px);
+  }
+
+  .meta-block {
+    margin-bottom: 30px;
+  }
+
+  .meta-label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    letter-spacing: 0.05em;
+  }
+
+  .meta-value {
+    display: block;
+    font-size: 1rem;
+    color: var(--text-main);
+  }
+
+  .tech-stack-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .tech-tag {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border: 1px solid var(--border-color);
+    color: #ccc;
+    background: rgba(0,0,0,0.3);
+  }
+
+  /* --- BUTTONS DETAIL --- */
+  .action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 40px;
+  }
+
+  .action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 20px;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .action-btn.outline {
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+  }
+
+  .action-btn.outline:hover {
+    border-color: var(--text-main);
+    background: rgba(255,255,255,0.05);
+  }
+
+  /* --- FOOTER NAV DETAIL --- */
+  .detail-footer {
+    margin-top: 80px;
+    padding-top: 40px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .next-project-link {
+    text-decoration: none;
+    text-align: right;
+  }
+
+  .next-project-link .label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+  }
+
+  .next-project-link .title {
+    font-size: 1.2rem;
+    color: var(--text-main);
+    transition: color 0.3s ease;
+  }
+
+  .next-project-link:hover .title {
+    color: #fff;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
+  }
+
+  /* --- MOBILE RESPONSIVE DETAIL --- */
+  @media (max-width: 768px) {
+    .content-grid {
+      grid-template-columns: 1fr; /* Stack into single column */
+      gap: 40px;
+    }
+
+    /* Move sidebar (metadata) above main content */
+    .project-sidebar {
+      order: -1; 
+      position: static; 
+      margin-bottom: 20px;
+      padding: 20px;
+    }
+
+    .detail-header h1 {
+      font-size: 2.5rem; 
+    }
+
+    .project-hero-image {
+      aspect-ratio: 4 / 3; 
+    }
+    
+    .action-buttons {
+      flex-direction: row; 
+    }
+    
+    .action-btn {
+      flex: 1;
+    }
+  }
