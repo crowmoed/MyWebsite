@@ -370,7 +370,7 @@ canvas {
 /* Hover Effect: Glow and lift */
 .project-card:hover {
   border-color: rgba(255, 255, 255, 0.3);
-  transform: translateY(-5px);
+  transform: translateY(0x);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
 }
 
@@ -447,7 +447,7 @@ canvas {
 
 .card-links a:hover {
   opacity: 1;
-  text-decoration: underline;
+  text-decoration: none;
   text-decoration-thickness: 1px;
   text-underline-offset: 4px;
 }
