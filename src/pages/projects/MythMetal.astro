@@ -3,7 +3,7 @@ import Layout from '../../layout/Layout.astro';
 
 const project = {
   title: "Myth & Metal",
-  tagline: "Minecraft Forge mod featuring procedural dungeons, tiered item rarity, and custom rendering systems.",
+  tagline: "A Minecraft mod that adds tiered loot, procedural dungeons, and custom boss fights—with way too much rendering code.",
   date: "2024",
   role: "Mod Developer & Systems Architect",
   repoUrl: "https://github.com/crowmoed/Myth-Metal---Java",
@@ -37,87 +37,106 @@ const githubIcon = `
           </div>
 
           <div class="text-content">
-            <h3>Overview</h3>
+            <h3>What Is This?</h3>
             <p>
-              Myth & Metal is a comprehensive Minecraft Forge mod that overhauls progression through a tiered item rarity system, procedurally generated dungeons with wave-based combat, custom boss encounters, and entirely new biomes. The mod required deep integration with Minecraft's rendering pipeline via Mixins and custom world generation through Terrablender.
+              Myth & Metal overhauls Minecraft's progression with a seven-tier rarity system, procedurally generated dungeons, custom boss fights, and new biomes. The interesting part isn't the features—it's how deep I had to go into Minecraft's internals to make them work.
+            </p>
+            <p>
+              Mixins into the rendering pipeline. Custom world generation via Terrablender. NBT-driven item states. This project showed me that "modding" and "reverse engineering" are pretty much the same thing.
             </p>
 
-            <h3>Item Rarity & Tier System</h3>
+            <h3>The Rarity System</h3>
             <p>
-              The core progression system introduces seven rarity tiers (I–VII) with escalating damage multipliers from 1.0× to 5.0×. Unlike vanilla enchantments, rarity is stored <strong>per-item-instance</strong> via NBT tags, allowing identical weapon types to exist at different power levels.
+              Seven tiers. Damage multipliers from 1.0× up to 5.0×. The key design choice: rarity is stored <strong>per-item</strong>, not per-item-type. Two identical swords can have different tiers. This lives in NBT tags.
             </p>
             <p>
-              Implementation uses a Mixin into <code>ItemStack</code> with two injection points: <code>@Inject</code> on <code>getTooltipLines</code> appends rarity display, while <code>@Redirect</code> on <code>EnchantmentHelper.getDamageBonus</code> intercepts damage calculation to apply tier multipliers before enchantment bonuses. A custom anvil block (<code>CustomAnvilTierMenu</code>) extends <code>ItemCombinerMenu</code> to handle tier upgrades—placing an <code>UpgradeIngot</code> of higher tier transfers that tier to the target item.
-            </p>
-
-            <h3>Custom Rendering System</h3>
-            <p>
-              Each tier has a unique enchantment glint effect, requiring ~42 custom <code>RenderType</code> instances (7 tiers × 6 variants: basic glint, direct, entity-held, entity-direct, armor). These are constructed via <code>RenderType.CompositeState.builder()</code> with custom texture states pointing to tier-specific glint textures.
-            </p>
-            <p>
-              Mixins into <code>ItemRenderer</code> and <code>HumanoidArmorLayer</code> intercept vanilla glint buffer requests, substituting tier-appropriate render types based on the item's rarity NBT. The armor mixin completely replaces <code>render()</code> via <code>@Inject(at = HEAD, cancellable = true)</code>, iterating equipment slots and calling custom <code>renderArmorPieceOutline()</code> methods that apply tier-specific glint after base armor and trim rendering.
-            </p>
-
-            <h3>Procedural Dungeon System</h3>
-            <p>
-              Dungeons are self-contained challenge arenas generated on first portal entry. The architecture uses <strong>invisible trigger blocks</strong> with attached <code>BlockEntity</code> instances to manage room state:
+              Making this actually work required Mixins into <code>ItemStack</code>:
             </p>
             <ul>
-              <li><strong>Room Detection:</strong> When a player enters a trigger block, a recursive 6-directional flood-fill calculates room boundaries by propagating through adjacent <code>DungeonAirEntity</code> blocks</li>
-              <li><strong>Containment:</strong> Iron bars (indestructible, <code>strength = -1.0F</code>) spawn on room edges, trapping the player</li>
-              <li><strong>Wave Spawning:</strong> <code>DungeonRoomEntity</code> maintains mob count (16 total) and alive count (capped at 6 concurrent). Mobs spawn at validated positions (air blocks, no collision) with back-references to the room for death callbacks</li>
-              <li><strong>Completion:</strong> When all mobs die, <code>setDefeatedRoom()</code> recursively propagates through trigger blocks, replacing them with air and removing barriers</li>
+              <li><strong>Tooltip injection</strong> — <code>@Inject</code> on <code>getTooltipLines</code> appends the rarity display</li>
+              <li><strong>Damage calculation</strong> — <code>@Redirect</code> on <code>EnchantmentHelper.getDamageBonus</code> intercepts the damage math and applies tier multipliers before enchantment bonuses</li>
             </ul>
             <p>
-              Dungeon mobs (<code>DungeonSkeleton</code>, <code>DungeonSpider</code>, etc.) extend vanilla counterparts with fire immunity, bonus fire damage on attacks, and <code>die()</code> overrides that call <code>ThisdungeonRoom.mobDied()</code>.
+              Upgrading items happens at a custom anvil that extends <code>ItemCombinerMenu</code>. Drop in a higher-tier upgrade ingot, and the item inherits that tier.
             </p>
 
-            <h3>Procedural Generation Algorithm</h3>
+            <h3>Custom Glint Rendering</h3>
             <p>
-              Portal entry triggers dungeon generation via <code>placedungeon()</code>:
+              This is where things got complicated.
             </p>
-            <ul>
-              <li>Spawn room placed at calculated offset (unique per dungeon instance via <code>SavePortalData</code>)</li>
-              <li>Room loop: randomly selects room type (tree room, nether room, bone room), places NBT structure via <code>StructureTemplateManager</code>, adds connecting hallway, advances Z position by 17 blocks</li>
-              <li><strong>Probabilistic termination:</strong> 10% base stop chance + 10% per iteration (max 95%), creating expected length of ~10 rooms with high variance</li>
-              <li>Boss room placed at terminus with barrier wall at fixed offset</li>
-            </ul>
             <p>
-              Each dungeon instance gets a unique access number preventing regeneration on re-entry. Coordinates are stored in world-saved data.
+              Each tier needed its own enchantment glint effect. That meant ~42 custom <code>RenderType</code> instances—7 tiers times 6 variants (basic glint, direct, entity-held, entity-direct, armor, armor-direct). Each one built with <code>RenderType.CompositeState.builder()</code> pointing to tier-specific glint textures.
+            </p>
+            <p>
+              Mixins into <code>ItemRenderer</code> intercept vanilla glint buffer requests and substitute the right render type based on the item's rarity. The armor mixin is more aggressive—it completely replaces <code>render()</code> via <code>@Inject(at = HEAD, cancellable = true)</code>, then manually iterates equipment slots and applies tier-appropriate glints after base armor rendering.
+            </p>
+            <p>
+              I could have used Forge events. Mixins gave me finer control at the cost of more fragile code.
             </p>
 
-            <h3>Boss Entity System</h3>
+            <h3>Procedural Dungeons</h3>
             <p>
-              Bosses like <code>MagmaraakhEntity</code> (Lava Dungeon) feature animation state machines with idle/attack states managed by timeout counters. The AI goal stack prioritizes: FloatGoal → custom <code>MaghmaraakhAttack</code> → MeleeAttackGoal → MoveTowardsTargetGoal.
+              Dungeons are wave-based combat arenas that generate when you first enter a portal. The architecture is weird but effective: <strong>invisible trigger blocks</strong> with <code>BlockEntity</code> instances that manage room state.
             </p>
             <p>
-              The custom attack goal extends <code>MeleeAttackGoal</code> with animation-synchronized damage—a 40-tick wind-up delay before damage is dealt, synced with the attack animation state. Boss stats are substantial: 550 HP, 25 armor, full knockback resistance, 25 armor toughness. Death triggers <code>dungeonRoomEntity.bossDied()</code> for room completion.
+              Here's how a room activates:
+            </p>
+            <ol>
+              <li>Player steps on a trigger block</li>
+              <li>Recursive 6-directional flood-fill calculates room boundaries by propagating through adjacent <code>DungeonAirEntity</code> blocks</li>
+              <li>Indestructible iron bars (<code>strength = -1.0F</code>) spawn on room edges, trapping the player</li>
+              <li>Wave spawning begins—16 mobs total, max 6 alive at once</li>
+              <li>When all mobs die, barriers vanish and trigger blocks replace themselves with air</li>
+            </ol>
+            <p>
+              Dungeon mobs extend vanilla counterparts with fire immunity, bonus fire damage, and <code>die()</code> overrides that call back to the room entity. Every mob knows which room it belongs to.
+            </p>
+
+            <h3>Generation Algorithm</h3>
+            <p>
+              When you enter a portal, <code>placedungeon()</code> runs:
+            </p>
+            <ol>
+              <li>Spawn room placed at a unique offset (tracked via <code>SavePortalData</code> to prevent regeneration)</li>
+              <li>Loop: randomly pick a room type (tree, nether, bone), place the NBT structure via <code>StructureTemplateManager</code>, add a hallway, advance Z by 17 blocks</li>
+              <li>Each iteration has a 10% + (10% × iteration count) chance to stop (capped at 95%)</li>
+              <li>Boss room placed at the end</li>
+            </ol>
+            <p>
+              The probabilistic termination creates dungeons with an expected length of ~10 rooms but high variance. Some are short sprints. Some are marathons.
+            </p>
+
+            <h3>Boss Fights</h3>
+            <p>
+              Bosses like Magmaraakh (Lava Dungeon) have animation state machines with timeout counters managing idle/attack transitions. The AI goal stack prioritizes floating, then custom attack behavior, then melee, then movement.
+            </p>
+            <p>
+              The custom attack goal extends <code>MeleeAttackGoal</code> with a 40-tick wind-up before damage lands—synced to the attack animation. Stats are beefy: 550 HP, 25 armor, full knockback resistance. Boss death triggers room completion via a back-reference to <code>DungeonRoomEntity</code>.
             </p>
 
             <h3>World Generation</h3>
             <p>
-              Custom biomes integrate via <strong>Terrablender</strong>, registering overworld regions with weight 4. Each region class overrides <code>addBiomes()</code> to map climate parameters (temperature, humidity, continentalness, erosion) to custom biomes:
+              Custom biomes integrate through <strong>Terrablender</strong>, registering overworld regions with weight 4. Each region maps climate parameters to custom biomes:
             </p>
             <ul>
-              <li><strong>Ash Forest:</strong> Hot/arid/inland parameters, features surface lava lakes, custom ash trees (light-emitting logs), magma boulder decorations</li>
-              <li><strong>Enchanted Forest:</strong> Ambient particle effects (<code>ENCHANTED_HIT</code> at 0.01f density), custom ambient sound loop, mega jungle-style enchanted trees with 2×2 trunks</li>
+              <li><strong>Ash Forest</strong> — Hot, arid, inland. Surface lava lakes, light-emitting ash logs, magma boulder decorations</li>
+              <li><strong>Enchanted Forest</strong> — Ambient <code>ENCHANTED_HIT</code> particles at 0.01f density, custom sound loop, mega jungle-style trees with 2×2 trunks</li>
             </ul>
             <p>
-              Tiered ores (T2–T7) use decreasing rarity: T2 at 12 attempts/chunk across full height range, T7 at 1 attempt/chunk with triangle distribution below Y=-16. Tree placement uses <code>countExtra(9, 0.5f, 7)</code>—base 9 trees plus 50% chance of 7 additional per chunk.
+              Tiered ores get progressively rarer: T2 spawns 12 times per chunk across all heights, T7 spawns once per chunk below Y=-16 with triangle distribution. Tree placement uses <code>countExtra(9, 0.5f, 7)</code>—base 9 plus a coin flip for 7 more.
             </p>
 
             <h3>Dimension System</h3>
             <p>
-              Custom dimensions use Forge's <code>ResourceKey</code> registration for <code>LevelStem</code>, <code>Level</code>, and <code>DimensionType</code>. The dungeon dimension specifies fixed noon time, no skylight, zero ambient light, disabled beds/respawn anchors, and a <code>FixedBiomeSource</code> pointing to the dungeon biome. Portal blocks handle bidirectional transport with return coordinates stored in player persistent data.
+              The dungeon dimension is registered via Forge's <code>ResourceKey</code> system. Fixed noon lighting, no skylight, zero ambient light, disabled beds. A <code>FixedBiomeSource</code> points to the dungeon biome. Portal blocks handle bidirectional transport with return coordinates stored in player persistent data.
             </p>
 
-            <h3>Technical Patterns</h3>
+            <h3>Patterns I Relied On</h3>
             <ul>
-              <li><strong>Deferred Registration:</strong> All blocks, items, entities, and block entities use Forge's <code>DeferredRegister</code> pattern for lazy initialization</li>
-              <li><strong>Mixin-heavy rendering:</strong> Direct interception of vanilla render calls for maximum glint control, bypassing Forge events</li>
-              <li><strong>Distributed room state:</strong> Each trigger block has its own BlockEntity, enabling per-block detection while sharing a single <code>DungeonRoomEntity</code> via flood-fill propagation</li>
-              <li><strong>NBT persistence:</strong> Room state (started, defeated, mob counts) survives world saves via <code>saveAdditional()</code>/<code>load()</code></li>
-              <li><strong>Structure template composition:</strong> Dungeons built from multiple NBT structures placed sequentially along Z-axis</li>
+              <li><strong>Deferred Registration</strong> — All blocks, items, and entities use Forge's lazy initialization pattern</li>
+              <li><strong>Distributed room state</strong> — Each trigger block has its own BlockEntity, but they share a single <code>DungeonRoomEntity</code> via flood-fill propagation</li>
+              <li><strong>NBT persistence</strong> — Room state survives world saves via <code>saveAdditional()</code>/<code>load()</code></li>
+              <li><strong>Structure composition</strong> — Dungeons are multiple NBT structures placed sequentially along Z</li>
             </ul>
           </div>
         </main>
@@ -135,7 +154,7 @@ const githubIcon = `
           </div>
 
           <div class="meta-block">
-            <span class="meta-label">Technologies</span>
+            <span class="meta-label">Stack</span>
             <div class="tech-stack-wrap">
               {project.stack.map(tech => (
                 <span class="tech-tag">{tech}</span>
@@ -144,13 +163,13 @@ const githubIcon = `
           </div>
 
           <div class="meta-block">
-            <span class="meta-label">Core Systems</span>
+            <span class="meta-label">Systems</span>
             <div class="tech-stack-wrap">
               <span class="tech-tag">7-Tier Rarity</span>
               <span class="tech-tag">Procedural Dungeons</span>
-              <span class="tech-tag">Custom Glint Rendering</span>
-              <span class="tech-tag">Boss Fights</span>
-              <span class="tech-tag">Custom Biomes</span>
+              <span class="tech-tag">Custom Glints</span>
+              <span class="tech-tag">Boss AI</span>
+              <span class="tech-tag">Biomes</span>
             </div>
           </div>
 
@@ -160,13 +179,13 @@ const githubIcon = `
           </div>
 
           <div class="meta-block">
-            <span class="meta-label">Custom RenderTypes</span>
-            <span class="meta-value">~42 (7 tiers × 6 variants)</span>
+            <span class="meta-label">RenderTypes</span>
+            <span class="meta-value">~42 custom instances</span>
           </div>
 
           <div class="meta-block">
-            <span class="meta-label">Rarity Multipliers</span>
-            <span class="meta-value">1.0× → 1.2× → 1.5× → 2.0× → 3.0× → 3.8× → 5.0×</span>
+            <span class="meta-label">Damage Scaling</span>
+            <span class="meta-value">1.0× → 5.0× across tiers</span>
           </div>
 
           <div class="action-buttons">

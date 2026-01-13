@@ -3,7 +3,7 @@ import Layout from '../../layout/Layout.astro';
 
 const project = {
   title: "Web Scraper",
-  tagline: "Dual-target fanfiction scraping system with two-stage content filtering via keyword matching and local LLM classification.",
+  tagline: "Fanfiction discovery tool with keyword filtering and local LLM classification.",
   date: "2024",
   role: "Developer",
   repoUrl: "https://github.com/crowmoed/Webscraper---Python",
@@ -37,55 +37,62 @@ const githubIcon = `
           </div>
 
           <div class="text-content">
-            <h3>Overview</h3>
+            <h3>What Is This?</h3>
             <p>
-              This project automates the discovery of fanfiction stories matching specific criteria across Archive of Our Own (AO3) and FanFiction.net. It combines browser automation for content extraction with a two-stage filtering pipeline—fast keyword matching followed by local LLM classification—to surface relevant stories and log them to Google Sheets.
+              A scraper that trawls AO3 and FanFiction.net looking for stories that match specific criteria. Keyword filtering handles the obvious rejects, then a local LLM decides if the rest are actually worth reading.
+            </p>
+            <p>
+              Matches get logged to a Google Sheet for later. The whole thing runs locally—no API costs, no rate limits.
             </p>
 
-            <h3>Two-Stage Filtering Pipeline</h3>
+            <h3>The Two-Stage Filter</h3>
             <p>
-              The system uses a tiered approach to content filtering that balances speed with accuracy:
+              LLM inference is slow. Running every story through one would take forever. So the pipeline has two stages:
             </p>
-            <ul>
-              <li><strong>Stage 1 - Keyword Filter:</strong> Case-insensitive substring matching against story summaries. Stories without target keywords are immediately skipped, avoiding expensive LLM inference for obviously irrelevant content.</li>
-              <li><strong>Stage 2 - LLM Analysis:</strong> Stories passing the keyword filter are sent to a local Ollama instance for semantic classification. The LLM evaluates whether the story actually matches the search criteria and returns a binary True/False decision.</li>
-            </ul>
+            <ol>
+              <li><strong>Keyword filter</strong> — Fast substring matching against summaries. No keywords? Skip immediately.</li>
+              <li><strong>LLM classification</strong> — Stories that pass stage one get sent to Ollama for a real judgment call. The model returns True or False.</li>
+            </ol>
             <p>
-              This two-tier approach significantly improves throughput—keyword filtering handles the bulk of rejections instantly, while LLM inference is reserved for stories that need deeper analysis.
+              This cuts LLM calls by 50-90% depending on how selective your keywords are. Most stories don't make it past stage one.
             </p>
 
             <h3>Browser Automation</h3>
             <p>
-              The scraper uses SeleniumBase in undetected-chromedriver mode to navigate target sites. This handles bot detection systems that would block standard Selenium requests. Key features include:
+              Standard Selenium gets blocked instantly on these sites. SeleniumBase in undetected-chromedriver mode gets around that—it masks the automation fingerprints that bot detection looks for.
+            </p>
+            <p>
+              The scraper handles CAPTCHAs automatically via <code>uc_gui_click_captcha()</code>, and <code>uc_open_with_reconnect()</code> retries on flaky connections. DOM extraction uses CSS selectors to pull titles and summaries from each page.
+            </p>
+
+            <h3>Site-Specific Scrapers</h3>
+            <p>
+              Each site needs its own module because the DOM structure differs:
             </p>
             <ul>
-              <li><strong>CAPTCHA Handling:</strong> Automatic CAPTCHA solving via <code>uc_gui_click_captcha()</code></li>
-              <li><strong>Resilient Page Loading:</strong> <code>uc_open_with_reconnect()</code> provides retry logic for flaky connections</li>
-              <li><strong>DOM Extraction:</strong> CSS selector-based traversal pulls titles and summaries from each listing page</li>
+              <li><strong>AO3</strong> — Filters by fandom tag, 80k+ word count, sorted by update date. Pulls from <code>div.header.module</code> and <code>.userstuff.summary</code>.</li>
+              <li><strong>FanFiction.net</strong> — Filters by rating, length, and language. Uses <code>.stitle</code> and <code>.z-indent.z-padtop</code>.</li>
             </ul>
-
-            <h3>Site-Specific Implementations</h3>
             <p>
-              Each target site has its own scraper module with customized selectors and URL parameters:
-            </p>
-            <ul>
-              <li><strong>AO3:</strong> Filters by fandom tag, minimum word count (80k+), sorted by revision date. Extracts from <code>div.header.module</code> and <code>.userstuff.summary</code> selectors.</li>
-              <li><strong>FanFiction.net:</strong> Filters by rating, length threshold, and language. Uses <code>.stitle</code> and <code>.z-indent.z-padtop</code> selectors for content extraction.</li>
-            </ul>
-
-            <h3>Local LLM Integration</h3>
-            <p>
-              Classification runs through Ollama, enabling fully local inference without API rate limits or costs. The system supports multiple models (phi4, phi4-mini, deepseek-r1:14b) with temperature set to 0 for deterministic outputs. A prompt template instructs the model to respond with a single-word True/False answer, which is parsed directly from the response.
+              If either site changes their markup, the selectors break. That's the fragile part.
             </p>
 
-            <h3>Data Persistence</h3>
+            <h3>Local LLM</h3>
             <p>
-              Matching stories are logged to Google Sheets via the gspread library. OAuth2 service account authentication connects to the target spreadsheet, and each match appends a row containing title, summary, page number, and URL. This provides a human-readable output for manual review and further curation.
+              Classification runs through Ollama—phi4, phi4-mini, or deepseek-r1 depending on what you've got pulled. Temperature is set to 0 for deterministic outputs. The prompt tells the model to respond with a single word: True or False.
+            </p>
+            <p>
+              Parsing is just string matching. If the model gets chatty, it breaks. But with the right prompt, it doesn't.
             </p>
 
-            <h3>Pagination & Flow Control</h3>
+            <h3>Output</h3>
             <p>
-              The scraper supports configurable page ranges for resumable operation. Start and end pages are set via constants, allowing interrupted scrapes to continue from where they left off. Each page load includes CAPTCHA handling before content extraction begins.
+              Matches append to a Google Sheet via gspread with OAuth2 service account auth. Each row gets title, summary, page number, and URL. Easy to scan through later and pick what to actually read.
+            </p>
+
+            <h3>Resumable Runs</h3>
+            <p>
+              Start and end pages are configurable constants. If a scrape gets interrupted, bump the start page and run again. Not sophisticated, but it works.
             </p>
           </div>
         </main>
@@ -103,7 +110,7 @@ const githubIcon = `
           </div>
 
           <div class="meta-block">
-            <span class="meta-label">Technologies</span>
+            <span class="meta-label">Stack</span>
             <div class="tech-stack-wrap">
               {project.stack.map(tech => (
                 <span class="tech-tag">{tech}</span>
@@ -114,21 +121,20 @@ const githubIcon = `
           <div class="meta-block">
             <span class="meta-label">Features</span>
             <div class="tech-stack-wrap">
-              <span class="tech-tag">Two-Stage Filtering</span>
-              <span class="tech-tag">Local LLM Classification</span>
+              <span class="tech-tag">Two-Stage Filter</span>
+              <span class="tech-tag">Local LLM</span>
               <span class="tech-tag">CAPTCHA Handling</span>
-              <span class="tech-tag">Google Sheets Export</span>
-              <span class="tech-tag">Resumable Scraping</span>
+              <span class="tech-tag">Sheets Export</span>
             </div>
           </div>
 
           <div class="meta-block">
-            <span class="meta-label">Target Sites</span>
-            <span class="meta-value">Archive of Our Own, FanFiction.net</span>
+            <span class="meta-label">Sites</span>
+            <span class="meta-value">AO3, FanFiction.net</span>
           </div>
 
           <div class="meta-block">
-            <span class="meta-label">LLM Backend</span>
+            <span class="meta-label">LLM</span>
             <span class="meta-value">Ollama (phi4, deepseek-r1)</span>
           </div>
 

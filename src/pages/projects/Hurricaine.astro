@@ -3,7 +3,7 @@ import Layout from '../../layout/Layout.astro';
 
 const project = {
   title: "HurricAIne",
-  tagline: "CNN-based hurricane trajectory prediction using ERA5 atmospheric reanalysis data.",
+  tagline: "Predicting where hurricanes go next—using deep learning and 40 years of atmospheric data.",
   date: "2024",
   role: "ML Engineer & Data Pipeline Architect",
   repoUrl: "https://github.com/crowmoed/HurricAIne---Python",
@@ -33,69 +33,84 @@ const githubIcon = `
         
         <main class="project-body">
           <div class="project-hero-image">
-             <div class="placeholder-overlay">Predicted vs. Actual Hurricane Trajectory Visualization</div>
+             <div class="placeholder-overlay">Predicted vs. Actual Hurricane Trajectory</div>
           </div>
 
           <div class="text-content">
-            <h3>The Challenge</h3>
+            <h3>Why This Project?</h3>
             <p>
-              Hurricane trajectory prediction is notoriously difficult—chaotic atmospheric dynamics, sparse observational data over oceans, and the need for rapid forecasting all compound the problem. Traditional numerical weather prediction (NWP) models require massive computational resources and still struggle with short-term displacement accuracy. The goal: build a lightweight deep learning system that predicts 6-hour displacement vectors (Δlat, Δlon) using readily available reanalysis data.
+              Hurricanes are chaotic. The atmosphere doesn't play nice with predictions, observational data over oceans is sparse, and forecasters need answers <em>fast</em>. Traditional numerical weather models demand supercomputer-level resources and still miss short-term movements.
+            </p>
+            <p>
+              I wanted to see if a lightweight CNN could do better—specifically, predict where a storm will be <strong>6 hours from now</strong> using freely available reanalysis data.
             </p>
 
-            <h3>Data Pipeline Architecture</h3>
+            <h3>The Data Problem</h3>
             <p>
-              The system fuses two primary data sources. <strong>ERA5 reanalysis data</strong> from ECMWF provides gridded atmospheric fields—downloaded via the CDS API as monthly NetCDF files split by product type (single-level, accumulated, pressure-level). An LRU-style cache prevents redundant disk reads. <strong>HURDAT2 best-track records</strong> supply ground-truth storm positions at 6-hour intervals, serialized as JSON indexed by timestamp.
-            </p>
-            <p>
-              For each timestep, the pipeline extracts a 70°×70° bounding box centered on the storm position. This requires handling ERA5's 0-360° longitude convention versus HURDAT's -180/180° system, plus date line crossings via <code>xr.roll()</code> with coordinate reassignment.
-            </p>
-
-            <h3>Feature Engineering</h3>
-            <p>
-              Each training sample is a <strong>(40, 40, 17)</strong> tensor constructed from:
+              Two data sources power this system:
             </p>
             <ul>
-              <li><strong>2D fields (5 channels):</strong> 10m wind components (u10, v10), mean sea level pressure, sea surface temperature, total column water vapor</li>
-              <li><strong>3D fields (12 channels):</strong> Wind components (u, v) and relative humidity at 4 pressure levels (200, 500, 700, 850 hPa)</li>
+              <li><strong>ERA5 Reanalysis</strong> — Gridded atmospheric fields from ECMWF, downloaded as monthly NetCDF files via the CDS API. I built an LRU-style cache to avoid hammering the disk.</li>
+              <li><strong>HURDAT2 Best Tracks</strong> — Ground-truth storm positions at 6-hour intervals, stored as JSON indexed by timestamp.</li>
             </ul>
             <p>
-              All variables are NaN-filled, bilinearly resized to 40×40, and concatenated along the channel axis. The target is simply the 6-hour displacement: <code>next_pos - current_pos</code> in degrees.
+              The tricky part? ERA5 uses 0–360° longitude. HURDAT uses -180/180°. Storms cross the date line. I spent more time than I'd like to admit wrestling with <code>xr.roll()</code> and coordinate reassignment to make these play together.
             </p>
 
-            <h3>CNN Architecture</h3>
+            <h3>What Goes Into the Model</h3>
             <p>
-              The model balances parameter efficiency with expressive power:
+              For each timestep, I extract a <strong>70° × 70° box</strong> centered on the storm, then resize it to a clean <strong>40 × 40 × 17</strong> tensor:
             </p>
             <ul>
-              <li><strong>Separable Convolutions:</strong> Reduce parameter count for multi-channel meteorological data without sacrificing spatial feature extraction</li>
-              <li><strong>Residual Block:</strong> 1×1 shortcut projection + dual separable convs with batch norm—preserves gradient flow and allows learning identity mappings for persistent atmospheric patterns</li>
-              <li><strong>Channel Attention (SE-style):</strong> Global average pooling → Dense(64) → Dense(C, sigmoid) → channel-wise multiplication. Learns to weight variable importance dynamically (e.g., SST vs. wind shear)</li>
-              <li><strong>Spatial Attention:</strong> 1×1 conv with sigmoid activation highlights relevant storm quadrants, accounting for asymmetric hurricane structure</li>
-              <li><strong>Head:</strong> GlobalAveragePooling → Dense(128) → Dense(64) → Dense(2, linear) outputting [Δlat, Δlon]</li>
+              <li><strong>5 surface channels:</strong> 10m winds (u, v), sea level pressure, SST, water vapor</li>
+              <li><strong>12 pressure-level channels:</strong> Wind components + relative humidity at 200, 500, 700, and 850 hPa</li>
             </ul>
             <p>
-              Dropout (0.2–0.4) and batch normalization are applied throughout. Training uses MSE loss on z-score normalized targets, Adam optimizer with ReduceLROnPlateau and early stopping.
+              The target is dead simple: <code>next_position - current_position</code>. Just the displacement in degrees.
             </p>
 
-            <h3>Inference & Evaluation</h3>
+            <h3>The CNN Architecture</h3>
             <p>
-              At inference time, the pipeline loads saved normalization statistics, constructs the feature tensor for the current timestep, forward-passes through the model, denormalizes the output, and computes predicted position as <code>current_pos + predicted_delta</code>. Error is calculated via Haversine approximation (Δ° × 111 km).
+              I optimized for parameter efficiency without sacrificing spatial awareness:
             </p>
-            <p>
-              Visualization uses Plotly Scattermaps with a CARTO dark basemap—dual-layer rendering overlays actual tracks against predicted positions, with bubble size proportional to storm radius and color-coded by intensity (VMAX).
-            </p>
-
-            <h3>Alternative: SHIPS + XGBoost Baseline</h3>
-            <p>
-              A simpler tabular baseline uses SHIPS diagnostic files (139-line records per snapshot) with a 10-feature vector: lat, lon, vmax, mslp, sst, ocean heat content, wind shear, mid-level RH, distance to land, and maximum potential intensity. XGBoost regresses on 24-hour deltas. This provides a non-spatial baseline for comparison—faster training, no GPU required, but loses the gridded spatial structure that the CNN exploits.
-            </p>
-
-            <h3>Technical Constraints Handled</h3>
             <ul>
-              <li><strong>Zero-dimension tensors:</strong> Explicit shape validation before TensorFlow resize operations</li>
-              <li><strong>Storm ID mismatch:</strong> Filtering ensures consecutive timesteps belong to the same storm system</li>
-              <li><strong>Memory management:</strong> ERA5 cache cleared after each storm to prevent file handle exhaustion</li>
-              <li><strong>Coordinate systems:</strong> Longitude sign conventions reconciled between data sources in both slicing and rendering</li>
+              <li><strong>Separable Convolutions</strong> — Fewer parameters, same spatial feature extraction</li>
+              <li><strong>Residual Block</strong> — 1×1 shortcut + dual separable convs. Helps when atmospheric patterns are persistent (the model can learn "just pass it through")</li>
+              <li><strong>Channel Attention</strong> — The model learns which variables matter most. Sometimes SST dominates; sometimes it's wind shear</li>
+              <li><strong>Spatial Attention</strong> — Hurricanes aren't symmetric. This lets the model focus on the relevant quadrant</li>
+            </ul>
+            <p>
+              The head is straightforward: GlobalAveragePooling → Dense(128) → Dense(64) → Dense(2) outputting <code>[Δlat, Δlon]</code>.
+            </p>
+
+            <h3>Running Inference</h3>
+            <p>
+              At prediction time:
+            </p>
+            <ol>
+              <li>Load saved normalization stats</li>
+              <li>Build the feature tensor for the current timestep</li>
+              <li>Forward pass → denormalize the output</li>
+              <li>Add the predicted delta to current position</li>
+            </ol>
+            <p>
+              Error is measured via Haversine approximation (roughly Δ° × 111 km). Visualization uses Plotly Scattermaps—actual tracks overlaid with predictions, bubble size scaled to storm radius, color-coded by intensity.
+            </p>
+
+            <h3>The Baseline: SHIPS + XGBoost</h3>
+            <p>
+              Not everything needs a CNN. I also built a tabular baseline using SHIPS diagnostic files—10 scalar features (lat, lon, vmax, pressure, SST, ocean heat content, shear, humidity, distance to land, MPI) fed into XGBoost for 24-hour predictions.
+            </p>
+            <p>
+              It's faster, needs no GPU, and provides a sanity check. The CNN wins on accuracy, but the gap isn't as large as you might expect.
+            </p>
+
+            <h3>Edge Cases I Had to Handle</h3>
+            <ul>
+              <li><strong>Zero-dimension tensors</strong> — TensorFlow crashes hard if you don't validate shapes before resize</li>
+              <li><strong>Storm ID mismatches</strong> — Had to filter to ensure consecutive timesteps belong to the same system</li>
+              <li><strong>Memory leaks</strong> — ERA5 cache gets cleared after each storm to prevent file handle exhaustion</li>
+              <li><strong>Coordinate hell</strong> — Longitude sign conventions differ between every data source. Fixed in slicing <em>and</em> rendering</li>
             </ul>
           </div>
         </main>
@@ -113,7 +128,7 @@ const githubIcon = `
           </div>
 
           <div class="meta-block">
-            <span class="meta-label">Technologies</span>
+            <span class="meta-label">Stack</span>
             <div class="tech-stack-wrap">
               {project.stack.map(tech => (
                 <span class="tech-tag">{tech}</span>
@@ -124,21 +139,21 @@ const githubIcon = `
           <div class="meta-block">
             <span class="meta-label">Data Sources</span>
             <div class="tech-stack-wrap">
-              <span class="tech-tag">ERA5 Reanalysis</span>
+              <span class="tech-tag">ERA5</span>
               <span class="tech-tag">HURDAT2</span>
               <span class="tech-tag">NOAA OISST</span>
-              <span class="tech-tag">SHIPS Diagnostics</span>
+              <span class="tech-tag">SHIPS</span>
             </div>
           </div>
 
           <div class="meta-block">
-            <span class="meta-label">Model Output</span>
-            <span class="meta-value">6-hour displacement vector (Δlat, Δlon)</span>
+            <span class="meta-label">Output</span>
+            <span class="meta-value">6-hour displacement (Δlat, Δlon)</span>
           </div>
 
           <div class="meta-block">
-            <span class="meta-label">Input Tensor</span>
-            <span class="meta-value">(40, 40, 17) — 17 atmospheric channels</span>
+            <span class="meta-label">Input Shape</span>
+            <span class="meta-value">(40, 40, 17)</span>
           </div>
 
           <div class="action-buttons">

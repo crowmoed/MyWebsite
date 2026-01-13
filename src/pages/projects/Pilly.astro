@@ -3,7 +3,7 @@ import Layout from '../../layout/Layout.astro';
 
 const project = {
   title: "Pilly",
-  tagline: "Hardware-accelerated 2D game engine built on SDL3 with sprite-based rendering and physics.",
+  tagline: "A 2D game engine from scratch—SDL3, raw pointers, and all the footguns that come with them.",
   date: "2024",
   role: "Engine Developer",
   repoUrl: "https://github.com/crowmoed/Pilly---C",
@@ -37,133 +37,130 @@ const githubIcon = `
           </div>
 
           <div class="text-content">
-            <h3>Overview</h3>
+            <h3>What Is This?</h3>
             <p>
-              Pilly is a lightweight 2D game engine built on SDL3's hardware-accelerated rendering abstraction. It provides sprite management, Euler-integrated physics with gravity, AABB collision detection, and an event-driven input system. The project served as an exploration of low-level graphics programming and game engine architecture fundamentals.
+              Pilly is a bare-bones 2D game engine built on SDL3. Sprite rendering, gravity, collision detection, mouse input—nothing fancy, but all written from scratch. The goal was to understand what actually happens between "draw a sprite" and pixels appearing on screen.
+            </p>
+            <p>
+              It's not production-ready. There are known footguns. But that was kind of the point.
             </p>
 
-            <h3>SDL3 Rendering Backend</h3>
+            <h3>The Rendering Stack</h3>
             <p>
-              The engine uses SDL3's unified renderer abstraction, which maps to platform-specific graphics APIs: Metal on macOS, Direct3D 11/12 on Windows, and Vulkan on Linux. Window and renderer are created together via <code>SDL_CreateWindowAndRenderer()</code>, returning both handles in a single call.
+              SDL3 abstracts away the graphics API—Metal on macOS, Direct3D on Windows, Vulkan on Linux. You call <code>SDL_CreateWindowAndRenderer()</code> and get both handles back. From there, it's just <code>SDL_RenderTexture()</code> calls into a command buffer, then <code>SDL_RenderPresent()</code> to flip.
             </p>
             <p>
-              SDL3 introduced breaking API changes from SDL2 that the codebase adopts: <code>SDL_RenderTexture()</code> replaces <code>SDL_RenderCopy()</code>, <code>SDL_EVENT_*</code> constants replace <code>SDL_*</code> event names, and <code>SDL_CreateSurfaceFrom()</code> uses type-safe <code>SDL_PixelFormat</code> enums instead of SDL2's <code>Uint32</code> format constants. Rendering uses <code>SDL_FRect</code> (floating-point rectangles) for sub-pixel positioning capability.
-            </p>
-
-            <h3>Image Loading Pipeline</h3>
-            <p>
-              Texture loading integrates <strong>STB Image</strong> (single-header library) for format support across JPEG, PNG, BMP, and TGA. The pipeline:
-            </p>
-            <ul>
-              <li><code>stbi_load()</code> returns CPU-side RGBA/RGB pixel buffer with channel count</li>
-              <li>Pixel format determined dynamically: 4 channels → <code>SDL_PIXELFORMAT_RGBA32</code> (32-bit), 3 channels → <code>SDL_PIXELFORMAT_RGB24</code> (24-bit)</li>
-              <li>Pitch (byte stride per scanline) calculated as <code>width × channels</code></li>
-              <li><code>SDL_CreateSurfaceFrom()</code> wraps raw pixels in CPU-side <code>SDL_Surface</code></li>
-              <li><code>SDL_CreateTextureFromSurface()</code> uploads to GPU VRAM</li>
-              <li>Immediate cleanup of CPU resources (surface + raw pixels via <code>stbi_image_free()</code>)—texture persists in GPU memory</li>
-            </ul>
-            <p>
-              Path resolution uses a multi-path fallback array to handle different working directory contexts (build dir vs project root), short-circuiting on first successful load.
+              I built this on SDL3 specifically, which meant dealing with breaking changes from SDL2: <code>SDL_RenderTexture()</code> instead of <code>SDL_RenderCopy()</code>, new event constant names, type-safe pixel format enums. The upside is floating-point rectangles (<code>SDL_FRect</code>) for sub-pixel positioning if I ever need it.
             </p>
 
-            <h3>Memory Management</h3>
+            <h3>Loading Images</h3>
             <p>
-              The engine uses a raw pointer ownership model. Each sprite owns its <code>SDL_Texture*</code>, destroyed in the destructor. A global <code>std::list&lt;sprite*&gt;</code> maintains non-owning references for iteration during collision checks and rendering.
+              Textures load through STB Image—a single-header library that handles JPEG, PNG, BMP, and TGA. The pipeline goes:
+            </p>
+            <ol>
+              <li><code>stbi_load()</code> gives you raw pixels and a channel count</li>
+              <li>Figure out the format: 4 channels → RGBA32, 3 channels → RGB24</li>
+              <li>Calculate pitch (bytes per row): <code>width × channels</code></li>
+              <li>Wrap pixels in an <code>SDL_Surface</code> (CPU-side)</li>
+              <li>Upload to GPU via <code>SDL_CreateTextureFromSurface()</code></li>
+              <li>Free the CPU-side stuff immediately—the texture lives in VRAM now</li>
+            </ol>
+            <p>
+              Path resolution uses a fallback array to handle different working directories. First successful load wins.
+            </p>
+
+            <h3>Memory: Raw Pointers Everywhere</h3>
+            <p>
+              Each sprite owns its <code>SDL_Texture*</code> and cleans it up in the destructor. A global <code>std::list&lt;sprite*&gt;</code> holds non-owning pointers for collision checks and rendering.
             </p>
             <p>
-              Sprites are stack-allocated in <code>main()</code>, ensuring deterministic destruction order (reverse construction). However, the constructor has a side-effect: it mutates the shared sprite list via <code>objects.push_back(this)</code> and stores a pointer to the list for O(n) collision iteration. This pattern, while functional, violates single responsibility and creates dangling pointer risk if sprites are destroyed before loop termination.
+              Sprites are stack-allocated in <code>main()</code>, so destruction order is deterministic. But the constructor has a side effect—it pushes <code>this</code> into the sprite list and stores a pointer back to it. That's a dangling pointer waiting to happen if you destroy a sprite mid-loop.
+            </p>
+            <p>
+              I know. It's not great. But I learned exactly why smart pointers and proper lifetime management exist.
             </p>
 
             <h3>Physics: Euler Integration</h3>
             <p>
-              Gravity uses explicit Euler integration—the simplest (and least accurate) method:
+              Gravity uses explicit Euler—the simplest possible integration method. Each frame, velocity increases by 1 pixel/frame² if you're above ground. Position updates by accumulated velocity. Hit the floor, velocity resets to zero.
             </p>
-            <ul>
-              <li>Position updated by accumulated velocity each frame</li>
-              <li><code>acceleration</code> (actually velocity, misnomer preserved) increments by 1 pixel/frame² when above ground</li>
-              <li>Ground detection: checks if <code>(y + height) ≥ windowHeight - 1</code>, with 1-pixel tolerance</li>
-              <li>Collision response: sets <code>acceleration = 0</code>, stopping fall immediately (no bounce, no energy transfer)</li>
-            </ul>
             <p>
-              <strong>Critical limitation:</strong> No delta time multiplication. Physics is frame-rate dependent—at 60 FPS gravity is 1 px/frame², but if frame rate drops, falling slows proportionally. Velocity Verlet or RK4 would provide stability at larger timesteps, but Euler suffices for this simple system.
+              No bounce. No energy transfer. No delta time.
+            </p>
+            <p>
+              That last part is the real problem: physics is tied to frame rate. If you're running at 60 FPS, gravity is 1 px/frame². Drop to 30 FPS, and everything falls in slow motion. A proper implementation would multiply by delta time. This one doesn't.
             </p>
 
-            <h3>Collision Detection: AABB</h3>
+            <h3>Collision: AABB</h3>
             <p>
-              Collision uses the <strong>Separating Axis Theorem</strong> simplified for axis-aligned bounding boxes. For AABBs, only two axes need testing (x and y). The <code>touching_object()</code> method checks four conditions:
+              Collision detection uses axis-aligned bounding boxes with the Separating Axis Theorem (simplified for rectangles). Check four conditions:
             </p>
             <ul>
-              <li>This sprite entirely left of target: <code>des_x + width ≤ target_x</code></li>
-              <li>This sprite entirely right of target: <code>des_x ≥ target_x + target_width</code></li>
-              <li>This sprite entirely above target: <code>des_y + height ≤ target_y</code></li>
-              <li>This sprite entirely below target: <code>des_y ≥ target_y + target_height</code></li>
+              <li>Am I entirely left of the target?</li>
+              <li>Am I entirely right of it?</li>
+              <li>Am I entirely above it?</li>
+              <li>Am I entirely below it?</li>
             </ul>
             <p>
-              If any condition is true, a separating axis exists and there's no collision. The system uses <strong>predictive detection</strong>—testing the proposed destination position before moving, preventing tunneling but creating "sticky" behavior where sprites can't slide along surfaces.
+              If any of those are true, there's a separating axis and no collision. Otherwise, you're overlapping.
             </p>
             <p>
-              <strong>Complexity:</strong> <code>move_to()</code> iterates the entire sprite list: O(n) per movement. With each sprite potentially moving each frame, worst-case is O(n²) per frame. No spatial partitioning (quadtree, grid hash, sweep-and-prune) is implemented.
+              The system tests the <em>proposed</em> position before moving—predictive detection. This prevents tunneling through objects but creates "sticky" collision where sprites can't slide along surfaces.
+            </p>
+            <p>
+              Performance is O(n²). Every sprite checks against every other sprite. No quadtree, no spatial hashing. The <code>std::list</code> makes it worse—pointer chasing kills cache locality.
             </p>
 
-            <h3>Event System</h3>
+            <h3>Input & Events</h3>
             <p>
-              Input uses SDL's polling loop pattern, draining the event queue each frame:
+              SDL's event queue gets drained every frame. Every sprite receives every event—pure broadcast, no filtering. Simple but wasteful for large sprite counts.
             </p>
-            <ul>
-              <li><strong>Broadcast pattern:</strong> Every sprite receives every event via <code>event_update()</code>—no filtering or targeting. Inefficient for large sprite counts, but simple.</li>
-              <li><strong>Mouse drag:</strong> On <code>SDL_EVENT_MOUSE_BUTTON_DOWN</code>, hit-test against sprite bounds. If hit, store grab offset (click position relative to sprite origin) to prevent snapping. While dragged, sprite follows mouse position minus offset.</li>
-              <li><strong>Continuous update:</strong> Drag movement executes every event poll while dragged, not just on mouse move events—redundant updates when mouse is stationary.</li>
-            </ul>
-
-            <h3>Rendering Pipeline</h3>
             <p>
-              Each frame follows the standard double-buffered pattern:
-            </p>
-            <ul>
-              <li><strong>Clear:</strong> <code>SDL_RenderClear()</code> fills backbuffer with draw color</li>
-              <li><strong>Draw:</strong> Multiple <code>SDL_RenderTexture()</code> calls build the command buffer. Integer positions converted to <code>SDL_FRect</code> floats at render time. Source rectangle is <code>nullptr</code> (full texture); non-null would enable sprite sheet tiling.</li>
-              <li><strong>Present:</strong> <code>SDL_RenderPresent()</code> swaps backbuffer to front, submits GPU commands</li>
-            </ul>
-            <p>
-              Render order is determined by sprite list iteration order—no z-ordering, depth sorting, or layering system. Last sprite rendered appears on top.
+              Mouse dragging tracks the offset between click position and sprite origin, so the sprite doesn't snap to cursor. While dragged, the sprite follows the mouse minus that offset. One quirk: drag updates run on every event poll, even when the mouse hasn't moved.
             </p>
 
             <h3>Frame Timing</h3>
             <p>
-              Timing uses a simple <code>SDL_Delay(16)</code> for ~60 FPS target. This is a <strong>fixed sleep</strong>, not a proper timestep—actual frame time includes event processing, O(n²) collision checks, rendering, and OS scheduling jitter. Frame rate fluctuates below 60 FPS under load.
-            </p>
-            <p>
-              Proper implementation would use <code>SDL_GetPerformanceCounter()</code> to measure actual elapsed time and apply delta time to physics calculations, decoupling simulation rate from frame rate.
-            </p>
-
-            <h3>Threading Model</h3>
-            <p>
-              Single-threaded: all logic runs on the main thread. SDL's event queue is thread-safe but unexploited here. No worker threads for physics, rendering, or asset loading. GPU parallelism occurs naturally—SDL3's renderer submits commands asynchronously, and <code>SDL_RenderPresent()</code> may block waiting for vsync while the GPU executes in parallel.
-            </p>
-
-            <h3>Platform Build Configuration</h3>
-            <p>
-              CMake handles cross-platform builds with platform-specific paths:
+              Timing is just <code>SDL_Delay(16)</code>—a fixed 16ms sleep targeting 60 FPS. This is wrong in multiple ways:
             </p>
             <ul>
-              <li><strong>macOS:</strong> Links against Homebrew's ARM64 prefix (<code>/opt/homebrew</code>) for SDL3</li>
-              <li><strong>Windows:</strong> Hard-coded absolute path to SDL3 MinGW distribution with post-build command to copy <code>SDL3.dll</code> to executable directory</li>
+              <li>Doesn't account for actual frame time (event processing, collision checks, rendering)</li>
+              <li>OS scheduling adds jitter</li>
+              <li>Frame rate drops below 60 under any load</li>
             </ul>
             <p>
-              The hard-coded paths are brittle—should use <code>find_package(SDL3)</code> or environment variables for portability.
+              The right approach uses <code>SDL_GetPerformanceCounter()</code> to measure elapsed time and apply it to physics. This engine doesn't do that.
             </p>
 
-            <h3>Known Limitations & Technical Debt</h3>
+            <h3>Threading</h3>
+            <p>
+              Single-threaded. All logic on main thread. SDL's event queue is thread-safe, but I'm not using that. No worker threads for physics or asset loading.
+            </p>
+            <p>
+              The GPU runs in parallel naturally—SDL3's renderer submits commands asynchronously, and <code>SDL_RenderPresent()</code> may block on vsync while the GPU catches up.
+            </p>
+
+            <h3>Build System</h3>
+            <p>
+              CMake handles cross-platform builds. macOS links against Homebrew's ARM64 SDL3. Windows uses a hard-coded path to the MinGW distribution with a post-build step to copy <code>SDL3.dll</code>.
+            </p>
+            <p>
+              The hard-coded paths won't work on anyone else's machine. Should use <code>find_package(SDL3)</code>. Didn't.
+            </p>
+
+            <h3>What I'd Do Differently</h3>
             <ul>
-              <li><strong>O(n²) collision:</strong> No spatial partitioning, cache-unfriendly pointer chasing through <code>std::list</code></li>
-              <li><strong>Frame-dependent physics:</strong> Behavior changes with frame rate</li>
-              <li><strong>No delta time:</strong> Assumes constant 60 FPS</li>
-              <li><strong>Dangling pointer risk:</strong> Sprite list stores raw pointers without lifetime tracking</li>
-              <li><strong>No sprite batching:</strong> Each sprite issues separate draw call (GPU overhead)</li>
-              <li><strong>No texture atlas:</strong> Identical images loaded separately, wasting VRAM</li>
-              <li><strong>Synchronous asset loading:</strong> Blocks main thread during image decode</li>
-              <li><strong>No error recovery:</strong> Failed texture loads leave sprite in invalid state</li>
+              <li><strong>Delta time</strong> — Decouple physics from frame rate</li>
+              <li><strong>Spatial partitioning</strong> — Quadtree or grid hash for collision</li>
+              <li><strong>Smart pointers</strong> — Or at least proper lifetime tracking</li>
+              <li><strong>Sprite batching</strong> — One draw call per texture, not per sprite</li>
+              <li><strong>Texture atlas</strong> — Stop loading the same image multiple times</li>
+              <li><strong>Async loading</strong> — Don't block main thread on image decode</li>
+              <li><strong>Error handling</strong> — Failed loads shouldn't leave sprites in broken states</li>
             </ul>
+            <p>
+              This project was about learning the hard way. Mission accomplished.
+            </p>
           </div>
         </main>
 
@@ -180,7 +177,7 @@ const githubIcon = `
           </div>
 
           <div class="meta-block">
-            <span class="meta-label">Technologies</span>
+            <span class="meta-label">Stack</span>
             <div class="tech-stack-wrap">
               {project.stack.map(tech => (
                 <span class="tech-tag">{tech}</span>
@@ -189,34 +186,28 @@ const githubIcon = `
           </div>
 
           <div class="meta-block">
-            <span class="meta-label">Core Systems</span>
+            <span class="meta-label">Systems</span>
             <div class="tech-stack-wrap">
               <span class="tech-tag">Sprite Rendering</span>
               <span class="tech-tag">Euler Physics</span>
               <span class="tech-tag">AABB Collision</span>
-              <span class="tech-tag">Event Polling</span>
               <span class="tech-tag">Mouse Drag</span>
             </div>
           </div>
 
           <div class="meta-block">
             <span class="meta-label">Rendering</span>
-            <span class="meta-value">SDL3 hardware-accelerated (Metal/D3D/Vulkan)</span>
+            <span class="meta-value">SDL3 (Metal / D3D / Vulkan)</span>
           </div>
 
           <div class="meta-block">
             <span class="meta-label">Physics</span>
-            <span class="meta-value">Explicit Euler integration, 1 px/frame² gravity</span>
+            <span class="meta-value">Euler, 1 px/frame², no delta time</span>
           </div>
 
           <div class="meta-block">
             <span class="meta-label">Collision</span>
-            <span class="meta-value">AABB via Separating Axis Theorem, O(n²)</span>
-          </div>
-
-          <div class="meta-block">
-            <span class="meta-label">Target Frame Rate</span>
-            <span class="meta-value">60 FPS (16ms fixed delay)</span>
+            <span class="meta-value">AABB, O(n²)</span>
           </div>
 
           <div class="action-buttons">

@@ -3,7 +3,7 @@ import Layout from '../../layout/Layout.astro';
 
 const project = {
   title: "Calendar Notes",
-  tagline: "Month-view calendar application with per-day note-taking and flat-file persistence.",
+  tagline: "A simple calendar with per-day notes—no database, just text files.",
   date: "2024",
   role: "Developer",
   repoUrl: "https://github.com/crowmoed/Calendar-Notes-App---Python",
@@ -37,46 +37,44 @@ const githubIcon = `
           </div>
 
           <div class="text-content">
-            <h3>Overview</h3>
+            <h3>What Is This?</h3>
             <p>
-              Calendar Notes is a desktop calendar application built with CustomTkinter that provides a clean month-view interface with integrated note-taking. Each day is clickable, opening a text editor where notes are saved automatically to local files. The app features multi-month navigation, today highlighting, and persistent storage.
+              A desktop calendar app built with CustomTkinter. Click a day, write a note, it saves to a file. That's pretty much it.
+            </p>
+            <p>
+              This was an early project—I wanted to build something functional with a real UI, learn how GUI frameworks handle layout and state, and actually finish it. The code has some rough edges (there's a hardcoded login that does nothing useful), but it works.
             </p>
 
-            <h3>Calendar Rendering</h3>
+            <h3>The Calendar Grid</h3>
             <p>
-              The calendar displays a full month grid using Tkinter's grid geometry manager. The rendering system calculates the first day of the month to determine proper column alignment—Sunday through Saturday positioning—then populates day buttons across the appropriate rows. Days are rendered as interactive buttons within styled frames, creating a clean visual hierarchy.
+              The month view uses Tkinter's grid layout. On render, it figures out what day of the week the month starts on, then fills in buttons for each day. Today gets highlighted automatically so you can spot it at a glance.
             </p>
             <p>
-              The current day is automatically highlighted with a distinct color, making it easy to identify today at a glance.
-            </p>
-
-            <h3>Month Navigation</h3>
-            <p>
-              Navigation buttons allow jumping forward or backward by one or two months. Each navigation action recalculates the calendar layout—determining the new month's day count via <code>monthrange()</code> and the starting weekday position. The interface updates dynamically, showing the correct number of days and proper alignment for each month.
-            </p>
-            <p>
-              Navigation labels display the target month names, so you always know where you're headed before clicking.
+              Navigation buttons let you jump forward or back by one or two months. Each jump recalculates the layout—how many days in the month, which column to start on—then rebuilds the grid.
             </p>
 
-            <h3>Note-Taking System</h3>
+            <h3>Notes</h3>
             <p>
-              Clicking any day opens a note editor with a full-size text box. The system automatically loads any existing note for that date, or creates a new file if none exists. Notes are saved back to disk when you confirm, preserving your content between sessions.
+              Click any day and a text editor opens. If there's already a note saved for that date, it loads. If not, you get a blank slate. Hit save and it writes to disk.
             </p>
             <p>
-              The editor provides a simple, distraction-free writing environment focused on quick capture of daily notes, reminders, or journal entries.
-            </p>
-
-            <h3>File-Based Persistence</h3>
-            <p>
-              Notes are stored as plain text files in a local <code>./data/</code> directory. Each file is named by date (year, month, day), making it easy to locate and back up your notes outside the app. The directory is created automatically on first use.
-            </p>
-            <p>
-              This flat-file approach keeps the app simple and portable—no database setup required, and your data remains in human-readable format.
+              Nothing fancy. Just a textbox and a save button.
             </p>
 
-            <h3>User Interface</h3>
+            <h3>Storage</h3>
             <p>
-              The app uses CustomTkinter for a modernized look over standard Tkinter. The interface includes a login screen, main menu with calendar and settings options, and the full calendar view with navigation controls. State transitions between screens clear and rebuild the UI, providing clean visual separation between app sections.
+              Notes live as plain text files in a <code>./data/</code> folder, named by date. No database, no config files—just <code>2024, 3, 15.txt</code> and similar.
+            </p>
+            <p>
+              This keeps things simple. You can open your notes in any text editor, back them up by copying a folder, or grep through them from the command line. The app creates the directory on first run if it doesn't exist.
+            </p>
+
+            <h3>The UI</h3>
+            <p>
+              CustomTkinter gives it a more modern look than stock Tkinter. There's a login screen (with hardcoded credentials—don't ask), a main menu, and the calendar view itself.
+            </p>
+            <p>
+              State transitions work by destroying all widgets and rebuilding from scratch. Not elegant, but straightforward.
             </p>
           </div>
         </main>
@@ -94,7 +92,7 @@ const githubIcon = `
           </div>
 
           <div class="meta-block">
-            <span class="meta-label">Technologies</span>
+            <span class="meta-label">Stack</span>
             <div class="tech-stack-wrap">
               {project.stack.map(tech => (
                 <span class="tech-tag">{tech}</span>
@@ -105,22 +103,16 @@ const githubIcon = `
           <div class="meta-block">
             <span class="meta-label">Features</span>
             <div class="tech-stack-wrap">
-              <span class="tech-tag">Month View Calendar</span>
+              <span class="tech-tag">Month View</span>
               <span class="tech-tag">Per-Day Notes</span>
-              <span class="tech-tag">Today Highlighting</span>
-              <span class="tech-tag">Multi-Month Navigation</span>
-              <span class="tech-tag">Flat-File Storage</span>
+              <span class="tech-tag">Today Highlight</span>
+              <span class="tech-tag">Navigation</span>
             </div>
           </div>
 
           <div class="meta-block">
-            <span class="meta-label">UI Framework</span>
-            <span class="meta-value">CustomTkinter</span>
-          </div>
-
-          <div class="meta-block">
             <span class="meta-label">Storage</span>
-            <span class="meta-value">Plain text files (./data/)</span>
+            <span class="meta-value">Plain text files</span>
           </div>
 
           <div class="action-buttons">
