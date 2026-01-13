@@ -278,6 +278,7 @@ canvas {
   /* --- GLOBAL MOBILE --- */
   @media (max-width: 768px) {
     .grid-container {
+      height: 100vh;
       grid-template-columns: 1fr;
       grid-template-rows: auto auto auto auto;
       border: none;
