@@ -780,7 +780,9 @@ canvas {
       grid-template-columns: 1fr; /* Stack into single column */
       gap: 40px;
     }
-
+    .profile-image{
+      width: 100%;
+    }
     /* Move sidebar (metadata) above main content */
     .project-sidebar {
       order: -1; 
