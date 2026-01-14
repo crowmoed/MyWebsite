@@ -3,7 +3,20 @@ import Layout from '../layout/Layout.astro';
 ---
 
 <Layout>
-    <header class="grid-item name-section ">
+    <header class="grid-item name-section">
+      <div class="profile-image">
+          <img 
+            src="/cristianopinto.png" 
+            style="
+              width: 20%; 
+              object-fit: cover; 
+              border-radius: 50%; 
+              display: block; 
+              border: 2px dashed #ffffff70; 
+              padding: 5px;
+              y:my-auto;"
+          />
+      </div>
       <h1 class="fade-in">Cristiano Pinto</h1>
       <p class="subtitle fade-in-delay">Backend Developer</p>
     </header>
