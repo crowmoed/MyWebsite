@@ -773,15 +773,24 @@ canvas {
     text-decoration-thickness: 1px;
     text-underline-offset: 4px;
   }
+  .profile-pic{
 
+              width: 20%; 
+              object-fit: cover; 
+              border-radius: 50%; 
+              display: block; 
+              border: 2px dashed #ffffff70; 
+              padding: 5px;
+              
+    }
   /* --- MOBILE RESPONSIVE DETAIL --- */
   @media (max-width: 768px) {
     .content-grid {
       grid-template-columns: 1fr; /* Stack into single column */
       gap: 40px;
     }
-    .profile-image{
-      width: 100%;
+    .profile-pic{
+      transform: rotate(270deg);
     }
     /* Move sidebar (metadata) above main content */
     .project-sidebar {
