@@ -16,7 +16,7 @@ const githubIcon = `
 </svg>`;
 ---
 
-<Layout>
+<Layout title={`${project.title} – Cristiano Pinto`} description={project.tagline} image="/data-scraper.png">
   <div class="projects-wrapper back">
     
     <div class="detail-container">
@@ -33,7 +33,7 @@ const githubIcon = `
         
         <main class="project-body">
           <div class="project-hero-image">
-             <img src="/data-scraper.png" style="width: 100%; height: 100%; display: block;"/>
+             <img src="/data-scraper.png" alt="Web Scraper project screenshot" style="width: 100%; height: 100%; display: block;"/>
           </div>
 
           <div class="text-content">
@@ -139,7 +139,7 @@ const githubIcon = `
           </div>
 
           <div class="action-buttons">
-            <a href={project.repoUrl} target="_blank" class="action-btn outline">
+            <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" class="action-btn outline">
               <span class="icon" set:html={githubIcon} />
               View Code
             </a>

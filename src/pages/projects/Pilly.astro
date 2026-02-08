@@ -16,7 +16,7 @@ const githubIcon = `
 </svg>`;
 ---
 
-<Layout>
+<Layout title={`${project.title} – Cristiano Pinto`} description={project.tagline}>
   <div class="projects-wrapper back">
     
     <div class="detail-container">
@@ -211,7 +211,7 @@ const githubIcon = `
           </div>
 
           <div class="action-buttons">
-            <a href={project.repoUrl} target="_blank" class="action-btn outline">
+            <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" class="action-btn outline">
               <span class="icon" set:html={githubIcon} />
               View Code
             </a>

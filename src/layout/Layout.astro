@@ -1,15 +1,45 @@
 ---
 import '../style.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** Absolute path for social share image (e.g. /cristianopinto.png). Uses origin from current URL. */
+  image?: string;
+}
+const { title = 'Cristiano Pinto – Backend Developer', description = 'Backend developer portfolio. Projects in Python, Java, C++, ML, game dev, and systems. Available for new opportunities.', image = '/cristianopinto.png' } = Astro.props;
+
+const siteOrigin = Astro.url.origin;
+const canonicalURL = new URL(Astro.url.pathname, siteOrigin).href;
+const imageURL = image.startsWith('http') ? image : new URL(image, siteOrigin).href;
+const siteName = 'Cristiano Pinto';
 ---
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Cristiano Pinto - Backend Developer</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalURL} />
+    <title>{title}</title>
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={siteName} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={imageURL} />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={imageURL} />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/svg+xml" href="/cristianopinto-circle.png" />
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <style is:global>
   .transition-fade {
     transition: opacity 0.4s ease-in-out, backdrop-filter 0.4s ease-in-out;
@@ -37,6 +67,48 @@ import '../style.css';
       <slot/>
       </div>
     </main>
+
+    <!-- Lightbox for project detail images -->
+    <div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="Enlarge image" hidden>
+      <button type="button" class="lightbox-close" aria-label="Close">×</button>
+      <div class="lightbox-backdrop"></div>
+      <img class="lightbox-img" src="" alt="" />
+    </div>
+
+    <script>
+      (function() {
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = lightbox?.querySelector('.lightbox-img');
+        const closeBtn = lightbox?.querySelector('.lightbox-close');
+        const backdrop = lightbox?.querySelector('.lightbox-backdrop');
+        function open(src, alt) {
+          if (!lightbox || !lightboxImg) return;
+          lightboxImg.src = src;
+          lightboxImg.alt = alt || 'Enlarged image';
+          lightbox.hidden = false;
+          lightbox.classList.add('is-open');
+          document.body.style.overflow = 'hidden';
+        }
+        function close() {
+          if (!lightbox) return;
+          lightbox.hidden = true;
+          lightbox.classList.remove('is-open');
+          document.body.style.overflow = '';
+        }
+        document.body.addEventListener('click', function(e) {
+          if (e.target.tagName === 'IMG' && e.target.closest('.project-hero-image')) {
+            e.preventDefault();
+            open(e.target.currentSrc || e.target.src, e.target.alt);
+          }
+        });
+        [closeBtn, backdrop].forEach(function(el) {
+          el?.addEventListener('click', close);
+        });
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape' && lightbox?.classList.contains('is-open')) close();
+        });
+      })();
+    </script>
 
     <script>
       import Swup from 'swup';
