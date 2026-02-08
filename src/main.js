@@ -7,7 +7,7 @@ import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUti
 const scene = new THREE.Scene()
 const nightColor = 0x040812; 
 scene.background = new THREE.Color(nightColor);
-scene.fog = new THREE.FogExp2(0x0a1525, 0.008);
+scene.fog = new THREE.Fog(0x0b1c2d, 18, 210);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
 camera.position.set(0, 15, 40); 
@@ -21,6 +21,9 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 renderer.setSize(window.innerWidth, window.innerHeight)
 renderer.shadowMap.enabled = true
 renderer.shadowMap.type = THREE.PCFSoftShadowMap
+renderer.toneMapping = THREE.ACESFilmicToneMapping
+renderer.toneMappingExposure = 1.05
+renderer.outputColorSpace = THREE.SRGBColorSpace
 
 const controls = new OrbitControls(camera, renderer.domElement)
 controls.enableDamping = true
@@ -95,25 +98,25 @@ function createSparkleTexture() {
 }
 
 // --- 3. LIGHTING SYSTEM ---
-const ambientLight = new THREE.AmbientLight(0x4466aa, 0.35); 
-scene.add(ambientLight);
+const hemisphereLight = new THREE.HemisphereLight(0xa6c0ff, 0x0a1422, 0.5);
+scene.add(hemisphereLight);
 
 // Moon light
-const moonLight = new THREE.DirectionalLight(0xaaccff, 0.7); 
-moonLight.position.set(100, 100, 50);
+const moonLight = new THREE.DirectionalLight(0xc7ddff, 0.85); 
+moonLight.position.set(90, 120, 60);
 moonLight.castShadow = true;
 moonLight.shadow.mapSize.width = 2048;
 moonLight.shadow.mapSize.height = 2048;
-moonLight.shadow.camera.far = 300;
-moonLight.shadow.camera.left = -150;
-moonLight.shadow.camera.right = 150;
-moonLight.shadow.camera.top = 150;
-moonLight.shadow.camera.bottom = -150;
-moonLight.shadow.bias = -0.0005;
+moonLight.shadow.camera.far = 280;
+moonLight.shadow.camera.left = -140;
+moonLight.shadow.camera.right = 140;
+moonLight.shadow.camera.top = 140;
+moonLight.shadow.camera.bottom = -140;
+moonLight.shadow.bias = -0.00045;
 scene.add(moonLight);
 
 // Cold rim light
-const rimLight = new THREE.DirectionalLight(0x223355, 0.25);
+const rimLight = new THREE.DirectionalLight(0x1c2c4a, 0.2);
 rimLight.position.set(-50, 30, -50);
 scene.add(rimLight);
 
@@ -139,100 +142,190 @@ for (let i = 0; i < posAttribute.count; i++) {
 
 groundGeo.computeVertexNormals();
 const ground = new THREE.Mesh(groundGeo, groundMat);
-ground.receiveShadow = true;
+ground.receiveShadow = false;
 scene.add(ground);
 
 // --- 5. PROCEDURAL FOREST ---
 const treeCount = 280;
-const dummy = new THREE.Object3D();
-const _color = new THREE.Color();
-
-const trunkGeo = new THREE.CylinderGeometry(0.25, 0.45, 3.5, 6);
-trunkGeo.translate(0, 1.75, 0);
-const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 1 });
-const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, treeCount);
-trunks.castShadow = true;
-trunks.receiveShadow = true;
-
-const tier1 = new THREE.ConeGeometry(4, 4.5, 8);
-tier1.translate(0, 5.5, 0);
-const tier2 = new THREE.ConeGeometry(3.2, 4, 8);
-tier2.translate(0, 8, 0);
-const tier3 = new THREE.ConeGeometry(2.4, 3.5, 8);
-tier3.translate(0, 10.2, 0);
-const tier4 = new THREE.ConeGeometry(1.5, 3, 7);
-tier4.translate(0, 12, 0);
-
-const mergedFoliage = BufferGeometryUtils.mergeGeometries([tier1, tier2, tier3, tier4]);
+const forestSeed = 1429;
+const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 0.95 });
 const foliageMat = new THREE.MeshStandardMaterial({ 
-    color: 0x1a4a2e, 
-    roughness: 0.9,
-    flatShading: true
+    color: 0xc7d4cf, 
+    roughness: 0.98,
+    flatShading: true,
+    vertexColors: true
 });
-const foliage = new THREE.InstancedMesh(mergedFoliage, foliageMat, treeCount);
-foliage.castShadow = true;
-foliage.receiveShadow = true;
-
-const snowTier1 = new THREE.ConeGeometry(3.2, 1.5, 8);
-snowTier1.translate(0, 7, 0);
-const snowTier2 = new THREE.ConeGeometry(2.5, 1.2, 8);
-snowTier2.translate(0, 9.3, 0);
-const snowTier3 = new THREE.ConeGeometry(1.8, 1, 8);
-snowTier3.translate(0, 11.2, 0);
-const snowTier4 = new THREE.ConeGeometry(1.0, 0.8, 7);
-snowTier4.translate(0, 12.8, 0);
-
-const mergedSnow = BufferGeometryUtils.mergeGeometries([snowTier1, snowTier2, snowTier3, snowTier4]);
 const snowCapMat = new THREE.MeshStandardMaterial({ 
-    color: 0xffffff, 
-    roughness: 0.8,
-    flatShading: true
+    color: 0xf4f7ff, 
+    roughness: 0.9,
+    flatShading: true,
+    vertexColors: true
 });
-const snowCaps = new THREE.InstancedMesh(mergedSnow, snowCapMat, treeCount);
-snowCaps.castShadow = true;
-snowCaps.receiveShadow = true;
+
+const upVector = new THREE.Vector3(0, 1, 0);
+const tempQuaternion = new THREE.Quaternion();
+const tempMatrix = new THREE.Matrix4();
+const tempPosition = new THREE.Vector3();
+const tempScale = new THREE.Vector3();
+const tempDirection = new THREE.Vector3();
+
+const mulberry32 = (seed) => () => {
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+
+const trunkGeometries = [];
+const foliageGeometries = [];
+const snowGeometries = [];
+
+const createColoredGeometry = (geometry, color) => {
+    const count = geometry.attributes.position.count;
+    const colors = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+        colors[i * 3] = color.r;
+        colors[i * 3 + 1] = color.g;
+        colors[i * 3 + 2] = color.b;
+    }
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    return geometry;
+};
+
+const createBranchGeometry = (length, radiusTop, radiusBottom, position, direction) => {
+    const branchGeo = new THREE.CylinderGeometry(radiusTop, radiusBottom, length, 6);
+    branchGeo.translate(0, length * 0.5, 0);
+    tempQuaternion.setFromUnitVectors(upVector, direction.clone().normalize());
+    tempMatrix.compose(position, tempQuaternion, tempScale.set(1, 1, 1));
+    branchGeo.applyMatrix4(tempMatrix);
+    return branchGeo;
+};
 
 for (let i = 0; i < treeCount; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const radius = 12 + Math.random() * 130; 
+    const rng = mulberry32(forestSeed + i * 97);
+    const angle = rng() * Math.PI * 2;
+    const radius = 12 + rng() * 130; 
     const x = Math.cos(angle) * radius;
     const z = Math.sin(angle) * radius;
     const y = getTerrainHeight(x, z) - 5;
 
-    const scale = 0.4 + Math.random() * 0.65;
-    const heightScale = scale * (0.75 + Math.random() * 0.5);
-    const rotY = Math.random() * Math.PI * 2;
+    const scale = 0.55 + rng() * 0.6;
+    const heightScale = 0.9 + rng() * 0.5;
+    const trunkHeight = 6.5 * scale * heightScale;
+    const trunkBaseRadius = 0.7 * scale;
+    const trunkTopRadius = 0.18 * scale;
+    const trunkGeo = new THREE.CylinderGeometry(trunkTopRadius, trunkBaseRadius, trunkHeight, 7);
+    trunkGeo.translate(0, trunkHeight * 0.5, 0);
 
-    dummy.position.set(x, y, z);
-    dummy.scale.set(scale, heightScale, scale);
-    dummy.rotation.set(0, rotY, 0);
-    dummy.updateMatrix();
-    trunks.setMatrixAt(i, dummy.matrix);
-    foliage.setMatrixAt(i, dummy.matrix);
-    
-    const distFactor = Math.min(radius / 130, 1);
-    const greenBase = 0.15 + Math.random() * 0.15;
-    const greenVariation = 0.7 + Math.random() * 0.3;
-    _color.setRGB(
-        0.06 * greenVariation, 
-        (0.2 + greenBase) * greenVariation * (1 - distFactor * 0.3), 
-        0.1 * greenVariation
-    );
-    foliage.setColorAt(i, _color);
+    const branchGeos = [trunkGeo];
+    const foliageClusters = [];
+    const snowClusters = [];
 
-    const snowAmount = 0.5 + Math.random() * 0.5;
-    dummy.scale.set(
-        scale * (0.7 + snowAmount * 0.35), 
-        heightScale * (0.5 + snowAmount * 0.5), 
-        scale * (0.7 + snowAmount * 0.35)
+    const levels = 3 + Math.floor(rng() * 2);
+    let branchStartHeight = trunkHeight * 0.35;
+    let branchLength = trunkHeight * 0.35;
+    let branchRadius = trunkBaseRadius * 0.35;
+
+    for (let level = 0; level < levels; level++) {
+        const branches = 2 + Math.floor(rng() * 2);
+        for (let b = 0; b < branches; b++) {
+            const yaw = rng() * Math.PI * 2;
+            const pitch = 0.35 + rng() * 0.35;
+            tempDirection.set(
+                Math.cos(yaw) * Math.cos(pitch),
+                Math.sin(pitch),
+                Math.sin(yaw) * Math.cos(pitch)
+            );
+            tempPosition.set(0, branchStartHeight + rng() * (trunkHeight * 0.15), 0);
+            const length = branchLength * (0.7 + rng() * 0.4);
+            const branchGeo = createBranchGeometry(
+                length,
+                branchRadius * 0.5,
+                branchRadius,
+                tempPosition,
+                tempDirection
+            );
+            branchGeos.push(branchGeo);
+
+            const clusterCount = 2 + Math.floor(rng() * 3);
+            for (let c = 0; c < clusterCount; c++) {
+                const clusterRadius = 0.9 + rng() * 1.4;
+                const clusterGeo = new THREE.IcosahedronGeometry(clusterRadius, 1);
+                const clusterOffset = tempDirection.clone().multiplyScalar(length * (0.75 + rng() * 0.3));
+                clusterOffset.y += (rng() - 0.5) * 0.6;
+                clusterOffset.x += (rng() - 0.5) * 0.8;
+                clusterOffset.z += (rng() - 0.5) * 0.8;
+                const clusterPos = new THREE.Vector3(
+                    tempPosition.x + clusterOffset.x,
+                    tempPosition.y + clusterOffset.y,
+                    tempPosition.z + clusterOffset.z
+                );
+                clusterGeo.translate(clusterPos.x, clusterPos.y, clusterPos.z);
+                foliageClusters.push(clusterGeo);
+
+                const snowCapGeo = new THREE.IcosahedronGeometry(clusterRadius * 0.85, 1);
+                snowCapGeo.scale(1.05, 1.05, 1.05);
+                snowCapGeo.translate(
+                    clusterPos.x,
+                    clusterPos.y + clusterRadius * 0.45,
+                    clusterPos.z
+                );
+                snowClusters.push(snowCapGeo);
+            }
+
+            if (tempDirection.y > 0.65) {
+                const accentSize = 0.18 + rng() * 0.25;
+                const accentGeo = new THREE.IcosahedronGeometry(accentSize, 0);
+                const branchTip = tempDirection.clone().multiplyScalar(length).add(tempPosition);
+                accentGeo.translate(
+                    branchTip.x,
+                    branchTip.y + accentSize * 0.35,
+                    branchTip.z
+                );
+                snowClusters.push(accentGeo);
+            }
+        }
+        branchStartHeight += trunkHeight * 0.2;
+        branchLength *= 0.7;
+        branchRadius *= 0.65;
+    }
+
+    const mergedTrunk = BufferGeometryUtils.mergeGeometries(branchGeos, false);
+    const mergedFoliage = BufferGeometryUtils.mergeGeometries(foliageClusters, false);
+    const mergedSnow = BufferGeometryUtils.mergeGeometries(snowClusters, false);
+
+    tempMatrix.makeTranslation(x, y, z);
+    mergedTrunk.applyMatrix4(tempMatrix);
+    mergedFoliage.applyMatrix4(tempMatrix);
+    mergedSnow.applyMatrix4(tempMatrix);
+
+    trunkGeometries.push(mergedTrunk);
+
+    const foliageTint = new THREE.Color().setHSL(
+        0.42 + rng() * 0.04,
+        0.18 + rng() * 0.12,
+        0.4 + rng() * 0.08
     );
-    dummy.updateMatrix();
-    snowCaps.setMatrixAt(i, dummy.matrix);
-    
-    const snowTint = 0.92 + Math.random() * 0.08;
-    _color.setRGB(snowTint, snowTint, 0.95 + Math.random() * 0.05);
-    snowCaps.setColorAt(i, _color);
+    foliageGeometries.push(createColoredGeometry(mergedFoliage, foliageTint));
+
+    const snowTint = new THREE.Color().setHSL(0.6, 0.1, 0.92 + rng() * 0.04);
+    snowGeometries.push(createColoredGeometry(mergedSnow, snowTint));
 }
+
+const mergedTrunks = BufferGeometryUtils.mergeGeometries(trunkGeometries, false);
+const mergedFoliage = BufferGeometryUtils.mergeGeometries(foliageGeometries, false);
+const mergedSnow = BufferGeometryUtils.mergeGeometries(snowGeometries, false);
+
+const trunks = new THREE.Mesh(mergedTrunks, trunkMat);
+const foliage = new THREE.Mesh(mergedFoliage, foliageMat);
+const snowCaps = new THREE.Mesh(mergedSnow, snowCapMat);
+
+trunks.castShadow = true;
+trunks.receiveShadow = true;
+foliage.castShadow = true;
+foliage.receiveShadow = true;
+snowCaps.castShadow = true;
+snowCaps.receiveShadow = true;
 
 scene.add(trunks);
 scene.add(foliage);
