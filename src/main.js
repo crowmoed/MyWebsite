@@ -8,7 +8,7 @@ const nightColor = 0x040812;
 scene.background = new THREE.Color(nightColor);
 scene.fog = new THREE.FogExp2(0x0a1525, 0.008);
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
-camera.position.set(0, 15, 40);
+camera.position.set(0, 25, 40);
 const renderer = new THREE.WebGLRenderer({
 canvas: document.querySelector('#bg'),
 antialias: true,
@@ -81,6 +81,64 @@ ctx.fillStyle = gradient;
 ctx.fillRect(0,0,32,32);
 return new THREE.CanvasTexture(canvas);
 }
+
+function createSnowGroundTexture() {
+const canvas = document.createElement('canvas');
+canvas.width = 512;
+canvas.height = 512;
+const ctx = canvas.getContext('2d');
+
+// Base snow color - slightly off-white
+ctx.fillStyle = '#e8f0ff';
+ctx.fillRect(0, 0, 512, 512);
+
+// Add heavy grain/noise for snow texture
+for (let i = 0; i < 30000; i++) {
+  const x = Math.random() * 512;
+  const y = Math.random() * 512;
+  const brightness = 200 + Math.random() * 55;
+  const alpha = 0.5 + Math.random() * 0.5;
+  ctx.fillStyle = `rgba(${brightness}, ${brightness}, ${brightness + 5}, ${alpha})`;
+  ctx.fillRect(x, y, 1, 1);
+}
+
+// Add darker spots for depth variation
+for (let i = 0; i < 500; i++) {
+  const x = Math.random() * 512;
+  const y = Math.random() * 512;
+  const size = 2 + Math.random() * 6;
+  const darkness = 180 + Math.random() * 40;
+  ctx.fillStyle = `rgba(${darkness}, ${darkness}, ${darkness + 10}, 0.3)`;
+  ctx.beginPath();
+  ctx.arc(x, y, size, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// Add bright sparkle spots
+for (let i = 0; i < 400; i++) {
+  const x = Math.random() * 512;
+  const y = Math.random() * 512;
+  const size = 1 + Math.random() * 2;
+  ctx.fillStyle = `rgba(255, 255, 255, ${0.7 + Math.random() * 0.3})`;
+  ctx.fillRect(x, y, size, size);
+}
+
+// Add footprint-like indentations
+for (let i = 0; i < 100; i++) {
+  const x = Math.random() * 512;
+  const y = Math.random() * 512;
+  const size = 3 + Math.random() * 8;
+  ctx.fillStyle = 'rgba(200, 210, 220, 0.4)';
+  ctx.beginPath();
+  ctx.ellipse(x, y, size, size * 0.6, Math.random() * Math.PI, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+const texture = new THREE.CanvasTexture(canvas);
+texture.wrapS = THREE.RepeatWrapping;
+texture.wrapT = THREE.RepeatWrapping;
+return texture;
+}
 // --- 3. LIGHTING SYSTEM ---
 const ambientLight = new THREE.AmbientLight(0x4466aa, 0.35);
 scene.add(ambientLight);
@@ -105,10 +163,24 @@ scene.add(rimLight);
 function getTerrainHeight(x, z) {
 return (Math.sin(x * 0.05) * 2) + (Math.cos(z * 0.05) * 2) + (Math.sin(x * 0.02 + z * 0.02) * 4);
 }
+
+// Create snow texture first
+const snowGroundTexture = createSnowGroundTexture();
+
 const groundGeo = new THREE.PlaneGeometry(300, 300, 128, 128);
 groundGeo.rotateX(-Math.PI / 2);
+
+// Ensure UV coordinates are set correctly
+const uvs = groundGeo.attributes.uv;
+for (let i = 0; i < uvs.count; i++) {
+  uvs.setXY(i, uvs.getX(i) * 20, uvs.getY(i) * 20);
+}
+
 const groundMat = new THREE.MeshStandardMaterial({
-color: 0xe8eeff, roughness: 0.75, metalness: 0.1
+color: 0xffffff, // Changed to white to show texture better
+roughness: 0.85, 
+metalness: 0.05,
+map: snowGroundTexture
 });
 const posAttribute = groundGeo.attributes.position;
 for (let i = 0; i < posAttribute.count; i++) {
@@ -121,89 +193,64 @@ groundGeo.computeVertexNormals();
 const ground = new THREE.Mesh(groundGeo, groundMat);
 ground.receiveShadow = true;
 scene.add(ground);
-// --- 5. PROCEDURAL FOREST ---
-const treeCount = 280;
-const dummy = new THREE.Object3D();
-const _color = new THREE.Color();
-const trunkGeo = new THREE.CylinderGeometry(0.25, 0.45, 3.5, 6);
-trunkGeo.translate(0, 1.75, 0);
-const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 1 });
-const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, treeCount);
-trunks.castShadow = true;
-trunks.receiveShadow = true;
-const tier1 = new THREE.ConeGeometry(4, 4.5, 8);
-tier1.translate(0, 5.5, 0);
-const tier2 = new THREE.ConeGeometry(3.2, 4, 8);
-tier2.translate(0, 8, 0);
-const tier3 = new THREE.ConeGeometry(2.4, 3.5, 8);
-tier3.translate(0, 10.2, 0);
-const tier4 = new THREE.ConeGeometry(1.5, 3, 7);
-tier4.translate(0, 12, 0);
-const mergedFoliage = BufferGeometryUtils.mergeGeometries([tier1, tier2, tier3, tier4]);
-const foliageMat = new THREE.MeshStandardMaterial({
-color: 0x1a4a2e,
-roughness: 0.9,
-flatShading: true
-});
-const foliage = new THREE.InstancedMesh(mergedFoliage, foliageMat, treeCount);
-foliage.castShadow = true;
-foliage.receiveShadow = true;
-const snowTier1 = new THREE.ConeGeometry(3.2, 1.5, 8);
-snowTier1.translate(0, 7, 0);
-const snowTier2 = new THREE.ConeGeometry(2.5, 1.2, 8);
-snowTier2.translate(0, 9.3, 0);
-const snowTier3 = new THREE.ConeGeometry(1.8, 1, 8);
-snowTier3.translate(0, 11.2, 0);
-const snowTier4 = new THREE.ConeGeometry(1.0, 0.8, 7);
-snowTier4.translate(0, 12.8, 0);
-const mergedSnow = BufferGeometryUtils.mergeGeometries([snowTier1, snowTier2, snowTier3, snowTier4]);
-const snowCapMat = new THREE.MeshStandardMaterial({
-color: 0xffffff,
-roughness: 0.8,
-flatShading: true
-});
-const snowCaps = new THREE.InstancedMesh(mergedSnow, snowCapMat, treeCount);
-snowCaps.castShadow = true;
-snowCaps.receiveShadow = true;
-for (let i = 0; i < treeCount; i++) {
-const angle = Math.random() * Math.PI * 2;
-const radius = 12 + Math.random() * 130;
-const x = Math.cos(angle) * radius;
-const z = Math.sin(angle) * radius;
-const y = getTerrainHeight(x, z) - 5;
-const scale = 0.4 + Math.random() * 0.65;
-const heightScale = scale * (0.75 + Math.random() * 0.5);
-const rotY = Math.random() * Math.PI * 2;
-dummy.position.set(x, y, z);
-dummy.scale.set(scale, heightScale, scale);
-dummy.rotation.set(0, rotY, 0);
-dummy.updateMatrix();
-trunks.setMatrixAt(i, dummy.matrix);
-foliage.setMatrixAt(i, dummy.matrix);
-const distFactor = Math.min(radius / 130, 1);
-const greenBase = 0.15 + Math.random() * 0.15;
-const greenVariation = 0.7 + Math.random() * 0.3;
-_color.setRGB(
-0.06 * greenVariation,
-(0.2 + greenBase) * greenVariation * (1 - distFactor * 0.3),
-0.1 * greenVariation
+// --- 5. TREE FOREST FROM GLB ---
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+
+const treeCount = 800; // Increased from 280
+const loader = new GLTFLoader();
+const treeInstances = [];
+
+// Load tree model
+loader.load(
+  '/tree.glb', // Path to your GLB tree model
+  (gltf) => {
+    const treeModel = gltf.scene;
+    
+    // Setup shadows for the model
+    treeModel.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+    
+    // Create instances with density increasing at distance
+    for (let i = 0; i < treeCount; i++) {
+      const treeClone = treeModel.clone();
+      
+      const angle = Math.random() * Math.PI * 2;
+      
+      // Weight distribution toward farther distances
+      const radiusRandom = Math.random();
+      const radius = radiusRandom < 0.2 ? 
+        12 + Math.random() * 40 :  // 20% close (12-52)
+        52 + Math.random() * 100;  // 80% far (52-152)
+      
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      const y = getTerrainHeight(x, z) - 5;
+      
+      // Smaller trees at distance
+      const distanceFactor = radius / 152;
+      const scale = (0.13 + Math.random() * 0.1) * (1.2 - distanceFactor * 0.4);
+      const rotY = Math.random() * Math.PI * 2;
+      
+      treeClone.position.set(x, y, z);
+      treeClone.scale.setScalar(scale);
+      treeClone.rotation.y = rotY;
+      
+      scene.add(treeClone);
+      treeInstances.push(treeClone);
+    }
+  },
+  (progress) => {
+    console.log('Loading tree model:', (progress.loaded / progress.total * 100) + '%');
+  },
+  (error) => {
+    console.error('Error loading tree model:', error);
+  }
 );
-foliage.setColorAt(i, _color);
-const snowAmount = 0.5 + Math.random() * 0.5;
-dummy.scale.set(
-scale * (0.7 + snowAmount * 0.35),
-heightScale * (0.5 + snowAmount * 0.5),
-scale * (0.7 + snowAmount * 0.35)
-);
-dummy.updateMatrix();
-snowCaps.setMatrixAt(i, dummy.matrix);
-const snowTint = 0.92 + Math.random() * 0.08;
-_color.setRGB(snowTint, snowTint, 0.95 + Math.random() * 0.05);
-snowCaps.setColorAt(i, _color);
-}
-scene.add(trunks);
-scene.add(foliage);
-scene.add(snowCaps);
+
 // ============================================
 // --- 6. ULTIMATE SNOW SYSTEM ---
 // ============================================
