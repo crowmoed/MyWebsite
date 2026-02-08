@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Procedural 3D Tree</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; background: #0a0a0f; }
+    #canvas { display: block; width: 100vw; height: 100vh; }
+    .controls {
+      position: fixed;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 1rem;
+      padding: 0.75rem 1.25rem;
+      background: rgba(0,0,0,0.6);
+      border-radius: 8px;
+      font-family: system-ui, sans-serif;
+      color: #e8e8e8;
+      font-size: 0.85rem;
+    }
+    button {
+      padding: 0.4rem 0.8rem;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      background: rgba(255,255,255,0.1);
+      color: #e8e8e8;
+      cursor: pointer;
+    }
+    button:hover { background: rgba(255,255,255,0.2); }
+    label { display: flex; align-items: center; gap: 0.4rem; }
+    input[type="range"] { width: 70px; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div class="controls">
+    <button type="button" id="regenerate">New tree</button>
+    <label><span>Depth</span><input type="range" id="depth" min="4" max="10" value="7"><span id="depthVal">7</span></label>
+    <label><span>Angle</span><input type="range" id="angle" min="15" max="50" value="32"><span id="angleVal">32°</span></label>
+    <label><span>Branches</span><input type="range" id="branches" min="2" max="5" value="3"><span id="branchesVal">3</span></label>
+  </div>
+
+  <script type="importmap">
+  { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    const canvas = document.getElementById('canvas');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0a12);
+    scene.fog = new THREE.FogExp2(0x0a0a12, 0.02);
+
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 500);
+    camera.position.set(8, 6, 12);
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    const controls = new OrbitControls(camera, canvas);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 5;
+    controls.maxDistance = 40;
+
+    const ambient = new THREE.AmbientLight(0x404060, 0.6);
+    scene.add(ambient);
+    const sun = new THREE.DirectionalLight(0xffeedd, 1);
+    sun.position.set(15, 25, 10);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.near = 0.5;
+    sun.shadow.camera.far = 80;
+    sun.shadow.camera.left = -25;
+    sun.shadow.camera.right = 25;
+    sun.shadow.camera.top = 25;
+    sun.shadow.camera.bottom = -25;
+    scene.add(sun);
+
+    let seed = Math.random();
+    function seededRandom() {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    }
+    function setSeed(s) { seed = s; }
+
+    const trunkMaterial = new THREE.MeshLambertMaterial({
+      color: 0x4a3728,
+      flatShading: true,
+    });
+    const barkMaterial = new THREE.MeshLambertMaterial({
+      color: 0x5c4033,
+      flatShading: true,
+    });
+    const leafMaterial = new THREE.MeshLambertMaterial({
+      color: 0x2d5a27,
+      flatShading: true,
+    });
+
+    let treeGroup = new THREE.Group();
+    let maxDepth = 7;
+    let branchAngleDeg = 32;
+    let numBranches = 3;
+
+    function addBranch(parent, depth, length, radius, position, quat) {
+      if (depth <= 0 || length < 0.15) return;
+
+      const r = Math.max(0.02, radius);
+      const cyl = new THREE.CylinderGeometry(r * 0.6, r, length, 6);
+      const mesh = new THREE.Mesh(cyl, depth > 2 ? trunkMaterial : barkMaterial);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.position.copy(position);
+      mesh.quaternion.copy(quat);
+      mesh.translateOnAxis(new THREE.Vector3(0, 1, 0), length / 2);
+      parent.add(mesh);
+
+      const end = position.clone().add(new THREE.Vector3(0, length, 0).applyQuaternion(quat));
+      const angleRad = (branchAngleDeg * Math.PI) / 180;
+      const n = depth > 2 ? numBranches : Math.min(2, numBranches);
+      const nextLength = length * (0.55 + seededRandom() * 0.35);
+      const nextRadius = radius * 0.65;
+
+      if (depth <= 1) {
+        const leafGeo = new THREE.SphereGeometry(0.35 + seededRandom() * 0.25, 5, 4);
+        const leaf = new THREE.Mesh(leafGeo, leafMaterial);
+        leaf.position.copy(end);
+        leaf.scale.setScalar(0.8 + seededRandom() * 0.6);
+        leaf.castShadow = true;
+        parent.add(leaf);
+        return;
+      }
+
+      const axis = new THREE.Vector3(0, 1, 0).applyQuaternion(quat);
+      const perp = new THREE.Vector3(1, 0, 0).applyQuaternion(quat);
+      if (Math.abs(perp.dot(axis)) > 0.99) perp.set(0, 0, 1).applyQuaternion(quat);
+      perp.crossVectors(axis, perp).normalize();
+
+      for (let i = 0; i < n; i++) {
+        const t = (i / (n + 1)) * 2 - 1;
+        const tilt = angleRad * (0.6 + seededRandom() * 0.5) * (t >= 0 ? 1 : -1);
+        const spin = seededRandom() * Math.PI * 0.4;
+        const q = new THREE.Quaternion().copy(quat);
+        const branchAxis = new THREE.Vector3(0, 1, 0);
+        branchAxis.applyQuaternion(q);
+        q.multiply(new THREE.Quaternion().setFromAxisAngle(perp, tilt));
+        q.multiply(new THREE.Quaternion().setFromAxisAngle(axis, spin));
+        addBranch(parent, depth - 1, nextLength, nextRadius, end.clone(), q);
+      }
+    }
+
+    function buildTree() {
+      if (treeGroup.parent) treeGroup.parent.remove(treeGroup);
+      treeGroup = new THREE.Group();
+      scene.add(treeGroup);
+
+      const trunkLength = 3;
+      const trunkRadius = 0.35;
+      const trunkGeo = new THREE.CylinderGeometry(trunkRadius * 0.8, trunkRadius * 1.2, trunkLength, 8);
+      const trunk = new THREE.Mesh(trunkGeo, trunkMaterial);
+      trunk.position.y = trunkLength / 2;
+      trunk.castShadow = true;
+      trunk.receiveShadow = true;
+      treeGroup.add(trunk);
+
+      const quat = new THREE.Quaternion();
+      const start = new THREE.Vector3(0, trunkLength, 0);
+      const angleRad = (branchAngleDeg * Math.PI) / 180;
+      const n = numBranches;
+      const nextLength = trunkLength * 0.5 * (0.8 + seededRandom() * 0.3);
+      const nextRadius = trunkRadius * 0.6;
+
+      for (let i = 0; i < n; i++) {
+        const tilt = angleRad * (0.7 + seededRandom() * 0.4) * (i % 2 === 0 ? 1 : -1);
+        const spin = (i / n) * Math.PI * 0.6 + seededRandom() * 0.3;
+        const q = new THREE.Quaternion()
+          .setFromAxisAngle(new THREE.Vector3(1, 0, 0), tilt)
+          .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), spin));
+        addBranch(treeGroup, maxDepth - 1, nextLength, nextRadius, start.clone(), q);
+      }
+    }
+
+    function regenerate() {
+      setSeed(Math.random());
+      buildTree();
+    }
+
+    document.getElementById('regenerate').addEventListener('click', regenerate);
+    document.getElementById('depth').addEventListener('input', (e) => {
+      maxDepth = +e.target.value;
+      document.getElementById('depthVal').textContent = maxDepth;
+      regenerate();
+    });
+    document.getElementById('angle').addEventListener('input', (e) => {
+      branchAngleDeg = +e.target.value;
+      document.getElementById('angleVal').textContent = e.target.value + '°';
+      regenerate();
+    });
+    document.getElementById('branches').addEventListener('input', (e) => {
+      numBranches = +e.target.value;
+      document.getElementById('branchesVal').textContent = numBranches;
+      regenerate();
+    });
+
+    buildTree();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
