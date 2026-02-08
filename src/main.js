@@ -144,12 +144,39 @@ scene.add(ground);
 
 // --- 5. PROCEDURAL FOREST ---
 const treeCount = 280;
+const forestRadius = 140;
+const forestInnerRadius = 14;
 const dummy = new THREE.Object3D();
 const _color = new THREE.Color();
 
+function hash2D(x, z) {
+    const value = Math.sin(x * 127.1 + z * 311.7) * 43758.5453;
+    return value - Math.floor(value);
+}
+
+function noise2D(x, z) {
+    const x0 = Math.floor(x);
+    const z0 = Math.floor(z);
+    const x1 = x0 + 1;
+    const z1 = z0 + 1;
+
+    const sx = x - x0;
+    const sz = z - z0;
+
+    const n00 = hash2D(x0, z0);
+    const n10 = hash2D(x1, z0);
+    const n01 = hash2D(x0, z1);
+    const n11 = hash2D(x1, z1);
+
+    const ix0 = n00 + (n10 - n00) * sx;
+    const ix1 = n01 + (n11 - n01) * sx;
+
+    return ix0 + (ix1 - ix0) * sz;
+}
+
 const trunkGeo = new THREE.CylinderGeometry(0.25, 0.45, 3.5, 6);
 trunkGeo.translate(0, 1.75, 0);
-const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 1 });
+const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 1, vertexColors: true });
 const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, treeCount);
 trunks.castShadow = true;
 trunks.receiveShadow = true;
@@ -167,7 +194,8 @@ const mergedFoliage = BufferGeometryUtils.mergeGeometries([tier1, tier2, tier3, 
 const foliageMat = new THREE.MeshStandardMaterial({ 
     color: 0x1a4a2e, 
     roughness: 0.9,
-    flatShading: true
+    flatShading: true,
+    vertexColors: true
 });
 const foliage = new THREE.InstancedMesh(mergedFoliage, foliageMat, treeCount);
 foliage.castShadow = true;
@@ -186,33 +214,40 @@ const mergedSnow = BufferGeometryUtils.mergeGeometries([snowTier1, snowTier2, sn
 const snowCapMat = new THREE.MeshStandardMaterial({ 
     color: 0xffffff, 
     roughness: 0.8,
-    flatShading: true
+    flatShading: true,
+    vertexColors: true
 });
 const snowCaps = new THREE.InstancedMesh(mergedSnow, snowCapMat, treeCount);
 snowCaps.castShadow = true;
 snowCaps.receiveShadow = true;
 
+const windDirection = new THREE.Vector3(0.6, 0, 0.4).normalize();
+
 for (let i = 0; i < treeCount; i++) {
     const angle = Math.random() * Math.PI * 2;
-    const radius = 12 + Math.random() * 130; 
-    const x = Math.cos(angle) * radius;
-    const z = Math.sin(angle) * radius;
+    const radius = Math.sqrt(Math.random()) * (forestRadius - forestInnerRadius) + forestInnerRadius;
+    const cluster = noise2D(Math.cos(angle) * radius * 0.08, Math.sin(angle) * radius * 0.08);
+    const clusterPush = 1 + (cluster - 0.5) * 0.4;
+    const x = Math.cos(angle) * radius * clusterPush;
+    const z = Math.sin(angle) * radius * clusterPush;
     const y = getTerrainHeight(x, z) - 5;
 
-    const scale = 0.4 + Math.random() * 0.65;
-    const heightScale = scale * (0.75 + Math.random() * 0.5);
+    const scale = 0.45 + Math.random() * 0.7;
+    const heightScale = scale * (0.85 + Math.random() * 0.6);
     const rotY = Math.random() * Math.PI * 2;
+    const lean = (noise2D(x * 0.08, z * 0.08) - 0.5) * 0.25;
+    const leanZ = (noise2D(x * 0.05 + 10, z * 0.05 + 10) - 0.5) * 0.2;
 
     dummy.position.set(x, y, z);
     dummy.scale.set(scale, heightScale, scale);
-    dummy.rotation.set(0, rotY, 0);
+    dummy.rotation.set(lean, rotY, leanZ);
     dummy.updateMatrix();
     trunks.setMatrixAt(i, dummy.matrix);
     foliage.setMatrixAt(i, dummy.matrix);
     
-    const distFactor = Math.min(radius / 130, 1);
-    const greenBase = 0.15 + Math.random() * 0.15;
-    const greenVariation = 0.7 + Math.random() * 0.3;
+    const distFactor = Math.min(radius / forestRadius, 1);
+    const greenBase = 0.12 + Math.random() * 0.18;
+    const greenVariation = 0.7 + Math.random() * 0.35;
     _color.setRGB(
         0.06 * greenVariation, 
         (0.2 + greenBase) * greenVariation * (1 - distFactor * 0.3), 
@@ -220,18 +255,25 @@ for (let i = 0; i < treeCount; i++) {
     );
     foliage.setColorAt(i, _color);
 
-    const snowAmount = 0.5 + Math.random() * 0.5;
+    const snowNoise = noise2D(x * 0.12, z * 0.12);
+    const heightBias = Math.min(heightScale, 1.4);
+    const snowAmount = 0.45 + snowNoise * 0.45 + heightBias * 0.15;
     dummy.scale.set(
         scale * (0.7 + snowAmount * 0.35), 
         heightScale * (0.5 + snowAmount * 0.5), 
         scale * (0.7 + snowAmount * 0.35)
     );
+    dummy.rotation.set(lean + windDirection.z * 0.05, rotY, leanZ + windDirection.x * 0.05);
     dummy.updateMatrix();
     snowCaps.setMatrixAt(i, dummy.matrix);
     
-    const snowTint = 0.92 + Math.random() * 0.08;
+    const snowTint = 0.92 + Math.random() * 0.06 + snowNoise * 0.02;
     _color.setRGB(snowTint, snowTint, 0.95 + Math.random() * 0.05);
     snowCaps.setColorAt(i, _color);
+
+    const barkTint = 0.15 + noise2D(x * 0.2, z * 0.2) * 0.15;
+    _color.setRGB(0.16 + barkTint, 0.1 + barkTint * 0.6, 0.06 + barkTint * 0.5);
+    trunks.setColorAt(i, _color);
 }
 
 scene.add(trunks);
