@@ -5,9 +5,9 @@ import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUti
 
 // --- 1. CORE SETUP ---
 const scene = new THREE.Scene()
-const nightColor = 0x040812; 
+const nightColor = 0x050a14; 
 scene.background = new THREE.Color(nightColor);
-scene.fog = new THREE.Fog(0x081220, 20, 220);
+scene.fog = new THREE.Fog(0x0b1b2f, 18, 190);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
 camera.position.set(0, 15, 40); 
@@ -98,11 +98,11 @@ function createSparkleTexture() {
 }
 
 // --- 3. LIGHTING SYSTEM ---
-const hemisphereLight = new THREE.HemisphereLight(0x9fb6ff, 0x0b1524, 0.45);
+const hemisphereLight = new THREE.HemisphereLight(0xb3c9ff, 0x0a1220, 0.6);
 scene.add(hemisphereLight);
 
 // Moon light
-const moonLight = new THREE.DirectionalLight(0xb6d2ff, 0.75); 
+const moonLight = new THREE.DirectionalLight(0xc3dcff, 0.85); 
 moonLight.position.set(90, 120, 60);
 moonLight.castShadow = true;
 moonLight.shadow.mapSize.width = 2048;
@@ -116,7 +116,7 @@ moonLight.shadow.bias = -0.00045;
 scene.add(moonLight);
 
 // Cold rim light
-const rimLight = new THREE.DirectionalLight(0x223355, 0.25);
+const rimLight = new THREE.DirectionalLight(0x1a2c4a, 0.3);
 rimLight.position.set(-50, 30, -50);
 scene.add(rimLight);
 
@@ -150,14 +150,14 @@ const treeCount = 280;
 const forestSeed = 1429;
 const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 0.95 });
 const foliageMat = new THREE.MeshStandardMaterial({ 
-    color: 0x1a4a2e, 
-    roughness: 0.9,
+    color: 0x7e9f93, 
+    roughness: 0.98,
     flatShading: true,
     vertexColors: true
 });
 const snowCapMat = new THREE.MeshStandardMaterial({ 
     color: 0xffffff, 
-    roughness: 0.8,
+    roughness: 0.92,
     flatShading: true,
     vertexColors: true
 });
@@ -262,13 +262,32 @@ for (let i = 0; i < treeCount; i++) {
                 );
                 foliageClusters.push(clusterGeo);
 
-                const snowGeo = new THREE.IcosahedronGeometry(clusterRadius * 0.6, 0);
+                const snowScale = 0.7 + rng() * 0.2;
+                const snowGeo = new THREE.IcosahedronGeometry(clusterRadius * snowScale, 0);
                 snowGeo.translate(
-                    tempPosition.x + clusterOffset.x * 0.9,
-                    tempPosition.y + clusterOffset.y + clusterRadius * 0.35,
-                    tempPosition.z + clusterOffset.z * 0.9
+                    tempPosition.x + clusterOffset.x * 0.85,
+                    tempPosition.y + clusterOffset.y + clusterRadius * 0.55,
+                    tempPosition.z + clusterOffset.z * 0.85
                 );
                 snowClusters.push(snowGeo);
+            }
+
+            if (tempDirection.y > 0.55) {
+                const accentCount = 1 + Math.floor(rng() * 2);
+                for (let a = 0; a < accentCount; a++) {
+                    const accentRadius = branchRadius * (0.9 + rng() * 0.6);
+                    const accentGeo = new THREE.IcosahedronGeometry(accentRadius * 0.7, 0);
+                    const accentOffset = tempDirection.clone().multiplyScalar(length * (0.5 + rng() * 0.4));
+                    accentOffset.y += accentRadius * 0.6;
+                    accentOffset.x += (rng() - 0.5) * 0.3;
+                    accentOffset.z += (rng() - 0.5) * 0.3;
+                    accentGeo.translate(
+                        tempPosition.x + accentOffset.x,
+                        tempPosition.y + accentOffset.y,
+                        tempPosition.z + accentOffset.z
+                    );
+                    snowClusters.push(accentGeo);
+                }
             }
         }
         branchStartHeight += trunkHeight * 0.2;
@@ -288,13 +307,13 @@ for (let i = 0; i < treeCount; i++) {
     trunkGeometries.push(mergedTrunk);
 
     const foliageTint = new THREE.Color().setHSL(
-        0.32 + rng() * 0.03,
-        0.45 + rng() * 0.15,
-        0.2 + rng() * 0.1
+        0.35 + rng() * 0.04,
+        0.18 + rng() * 0.12,
+        0.48 + rng() * 0.12
     );
     foliageGeometries.push(createColoredGeometry(mergedFoliage, foliageTint));
 
-    const snowTint = new THREE.Color().setHSL(0.58, 0.15, 0.9 + rng() * 0.05);
+    const snowTint = new THREE.Color().setHSL(0.58, 0.12, 0.9 + rng() * 0.06);
     snowGeometries.push(createColoredGeometry(mergedSnow, snowTint));
 }
 
