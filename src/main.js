@@ -7,7 +7,7 @@ const scene = new THREE.Scene()
 const nightColor = 0x040812;
 scene.background = new THREE.Color(nightColor);
 scene.fog = new THREE.FogExp2(0x0a1525, 0.008);
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000)
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100)
 camera.position.set(0, 25, 40);
 const renderer = new THREE.WebGLRenderer({
 canvas: document.querySelector('#bg'),
@@ -231,7 +231,7 @@ loader.load(
       const y = getTerrainHeight(x, z) - 5;
       
       // Smaller trees at distance
-      const distanceFactor = radius / 152;
+      const distanceFactor = -radius / 152;
       const scale = (0.13 + Math.random() * 0.1) * (1.2 - distanceFactor * 0.4);
       const rotY = Math.random() * Math.PI * 2;
       
