@@ -7,7 +7,7 @@ const scene = new THREE.Scene()
 const nightColor = 0x040812;
 scene.background = new THREE.Color(nightColor);
 scene.fog = new THREE.FogExp2(0x0a1525, 0.008);
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000)
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100000)
 camera.position.set(0, 25, 40);
 const renderer = new THREE.WebGLRenderer({
 canvas: document.querySelector('#bg'),
@@ -17,7 +17,7 @@ powerPreference: "high-performance"
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 renderer.setSize(window.innerWidth, window.innerHeight)
 renderer.shadowMap.enabled = true
-renderer.shadowMap.type = THREE.PCFSoftShadowMap
+renderer.shadowMap.type = THREE.VSMShadowMap
 const controls = new OrbitControls(camera, renderer.domElement)
 controls.enableDamping = true
 controls.dampingFactor = 0.05
@@ -146,14 +146,15 @@ scene.add(ambientLight);
 const moonLight = new THREE.DirectionalLight(0xaaccff, 0.7);
 moonLight.position.set(100, 100, 50);
 moonLight.castShadow = true;
-moonLight.shadow.mapSize.width = 2048;
-moonLight.shadow.mapSize.height = 2048;
+moonLight.shadow.mapSize.width = 4096;
+moonLight.shadow.mapSize.height = 4096;
 moonLight.shadow.camera.far = 300;
 moonLight.shadow.camera.left = -150;
 moonLight.shadow.camera.right = 150;
 moonLight.shadow.camera.top = 150;
 moonLight.shadow.camera.bottom = -150;
 moonLight.shadow.bias = -0.0005;
+moonLight.shadow.radius = 2;
 scene.add(moonLight);
 // Cold rim light
 const rimLight = new THREE.DirectionalLight(0x223355, 0.25);
@@ -167,7 +168,7 @@ return (Math.sin(x * 0.05) * 2) + (Math.cos(z * 0.05) * 2) + (Math.sin(x * 0.02 
 // Create snow texture first
 const snowGroundTexture = createSnowGroundTexture();
 
-const groundGeo = new THREE.PlaneGeometry(300, 300, 128, 128);
+const groundGeo = new THREE.PlaneGeometry(700, 700, 128, 128);
 groundGeo.rotateX(-Math.PI / 2);
 
 // Ensure UV coordinates are set correctly
@@ -196,7 +197,7 @@ scene.add(ground);
 // --- 5. TREE FOREST FROM GLB ---
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-const treeCount = 800; // Increased from 280
+const treeCount = 1300; // Increased from 280
 const loader = new GLTFLoader();
 const treeInstances = [];
 
@@ -223,15 +224,15 @@ loader.load(
       // Weight distribution toward farther distances
       const radiusRandom = Math.random();
       const radius = radiusRandom < 0.2 ? 
-        12 + Math.random() * 40 :  // 20% close (12-52)
-        52 + Math.random() * 100;  // 80% far (52-152)
+        12 + Math.random() * 80 :  // 20% close (12-52)
+        52 + Math.random() * 200;  // 80% far (52-352)
       
       const x = Math.cos(angle) * radius;
       const z = Math.sin(angle) * radius;
       const y = getTerrainHeight(x, z) - 5;
       
       // Smaller trees at distance
-      const distanceFactor = -radius / 152;
+      const distanceFactor = -radius / 352;
       const scale = (0.13 + Math.random() * 0.1) * (1.2 - distanceFactor * 0.4);
       const rotY = Math.random() * Math.PI * 2;
       
@@ -267,6 +268,30 @@ gustStrength: 0,
 gustTime: 0,
 nextGust: 2
 };
+
+// Mouse tracking for snow attraction
+const mouse = {
+  x: 0,
+  y: 0,
+  normalizedX: 0,
+  normalizedZ: 0,
+  isMoving: false,
+  lastMoveTime: 0
+};
+
+// Mouse movement listener
+window.addEventListener('mousemove', (event) => {
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  
+  // Convert to world-space attraction force (more subtle)
+  mouse.normalizedX = mouse.x * 0.25;
+  mouse.normalizedZ = -mouse.y * 0.25;
+  
+  mouse.isMoving = true;
+  mouse.lastMoveTime = Date.now();
+});
+
 // ---- LAYER 1: Dense Background Snow (far, small, many) ----
 const bgSnowCount = 50000;
 const bgSnowGeo = new THREE.BufferGeometry();
@@ -579,14 +604,33 @@ wind.gustStrength *= 0.98;
 // Base wind oscillation
 wind.baseX = Math.sin(time * 0.1) * 0.02 + 0.01;
 wind.baseZ = Math.cos(time * 0.15) * 0.015;
-}function animate() {
+}
+
+function animate() {
   requestAnimationFrame(animate);
   const time = clock.getElapsedTime();
   const delta = clock.getDelta();
   
   updateWind(time, delta);
+  
+  // Check if mouse stopped moving (after 100ms of no movement)
+  if (Date.now() - mouse.lastMoveTime > 100) {
+    mouse.isMoving = false;
+  }
+  
+  // Combine wind and mouse attraction
   const windX = wind.baseX + wind.gustX * wind.gustStrength;
   const windZ = wind.baseZ + wind.gustZ * wind.gustStrength;
+  
+  // Mouse attraction force (subtle but visible)
+  const mouseForceX = mouse.isMoving ? mouse.normalizedX * 1.2 : mouse.normalizedX * 0.6;
+  const mouseForceZ = mouse.isMoving ? mouse.normalizedZ * 1.2 : mouse.normalizedZ * 0.6;
+  
+  // Camera sway based on mouse position
+  const targetCameraX = mouse.x * 8;
+  const targetCameraY = 25 + mouse.y * 5;
+  camera.position.x += (targetCameraX - camera.position.x) * 0.05;
+  camera.position.y += (targetCameraY - camera.position.y) * 0.03;
   
   // Update shared uniforms once
   const timeUniform = { value: time };
@@ -600,9 +644,9 @@ wind.baseZ = Math.cos(time * 0.15) * 0.015;
     const d = bgSnowData[i];
     const drift = Math.sin(time * d.driftFreq + d.driftPhase) * d.driftAmp;
     
-    bgPos[idx] += windX * 0.5 + drift;
+    bgPos[idx] += windX * 0.5 + drift + mouseForceX * 0.4;
     bgPos[idx + 1] -= d.fallSpeed;
-    bgPos[idx + 2] += windZ * 0.5 + Math.cos(time * d.driftFreq + d.driftPhase) * d.driftAmp * 0.5;
+    bgPos[idx + 2] += windZ * 0.5 + Math.cos(time * d.driftFreq + d.driftPhase) * d.driftAmp * 0.5 + mouseForceZ * 0.4;
     
     if (bgPos[idx + 1] < -25) {
       bgPos[idx + 1] = 125;
@@ -626,9 +670,9 @@ wind.baseZ = Math.cos(time * 0.15) * 0.015;
     const wobble = Math.sin(wobbleTime) * d.wobbleAmp;
     const spiral = Math.sin(time * 0.5 + d.spiralPhase) * d.spiralRadius;
     
-    mainPos[idx] += windX + wobble + spiral;
+    mainPos[idx] += windX + wobble + spiral + mouseForceX * 0.8;
     mainPos[idx + 1] -= d.fallSpeed;
-    mainPos[idx + 2] += windZ + Math.cos(wobbleTime) * d.wobbleAmp * 0.7;
+    mainPos[idx + 2] += windZ + Math.cos(wobbleTime) * d.wobbleAmp * 0.7 + mouseForceZ * 0.8;
     
     if (mainPos[idx + 1] < -20) {
       mainPos[idx + 1] = 100;
@@ -643,16 +687,16 @@ wind.baseZ = Math.cos(time * 0.15) * 0.015;
   }
   mainSnowSystem.geometry.attributes.position.needsUpdate = true;
   
-  // Close-up flakes
+  // Close-up flakes (most responsive to mouse)
   const closePos = closeSnowSystem.geometry.attributes.position.array;
   const closeRot = closeSnowSystem.geometry.attributes.rotation.array;
   for (let i = 0, idx = 0; i < closeSnowCount; i++, idx += 3) {
     const d = closeSnowData[i];
     const sway = Math.sin(time * d.swayFreq + d.swayPhase) * d.swayAmp;
     
-    closePos[idx] += windX * 1.5 + sway;
+    closePos[idx] += windX * 1.5 + sway + mouseForceX * 1.8;
     closePos[idx + 1] -= d.fallSpeed;
-    closePos[idx + 2] += windZ * 1.5 + Math.sin(time * 0.7 + d.zWobble) * d.swayAmp * 0.5;
+    closePos[idx + 2] += windZ * 1.5 + Math.sin(time * 0.7 + d.zWobble) * d.swayAmp * 0.5 + mouseForceZ * 1.8;
     closeRot[i] += d.tumbleSpeed;
     
     if (closePos[idx + 1] < -10) {
@@ -677,9 +721,9 @@ wind.baseZ = Math.cos(time * 0.15) * 0.015;
     d.angle += d.orbitSpeed * orbitDelta;
     const radiusNow = d.radius + Math.sin(time * d.radiusOscSpeed + d.radiusOscillation) * 5;
     
-    vortexPosArr[idx] = Math.cos(d.angle) * radiusNow + windX * 20;
+    vortexPosArr[idx] = Math.cos(d.angle) * radiusNow + windX * 20 + mouseForceX * 20;
     vortexPosArr[idx + 1] -= d.verticalSpeed;
-    vortexPosArr[idx + 2] = Math.sin(d.angle) * radiusNow + windZ * 20;
+    vortexPosArr[idx + 2] = Math.sin(d.angle) * radiusNow + windZ * 20 + mouseForceZ * 20;
     
     if (vortexPosArr[idx + 1] < -10) {
       vortexPosArr[idx + 1] = 70;
@@ -688,15 +732,15 @@ wind.baseZ = Math.cos(time * 0.15) * 0.015;
   }
   vortexSystem.geometry.attributes.position.needsUpdate = true;
   
-  // Blowing wisps
+  // Blowing wisps (highly responsive to mouse)
   const wispPosArr = wispSystem.geometry.attributes.position.array;
   const gustMult = 1 + wind.gustStrength;
   for (let i = 0, idx = 0; i < wispCount; i++, idx += 3) {
     const d = wispData[i];
     
-    wispPosArr[idx] += d.speed * gustMult;
+    wispPosArr[idx] += d.speed * gustMult + mouseForceX * 2.5;
     wispPosArr[idx + 1] += Math.sin(time * 2 + d.yWobble) * d.yAmp;
-    wispPosArr[idx + 2] += windZ * 2;
+    wispPosArr[idx + 2] += windZ * 2 + mouseForceZ * 2.5;
     
     if (wispPosArr[idx] > 150) {
       wispPosArr[idx] = -150;
@@ -708,8 +752,8 @@ wind.baseZ = Math.cos(time * 0.15) * 0.015;
   
   // Ambient dust
   const dustPosArr = dustSystem.geometry.attributes.position.array;
-  const windXDust = windX * 0.3;
-  const windZDust = windZ * 0.3;
+  const windXDust = windX * 0.3 + mouseForceX * 0.8;
+  const windZDust = windZ * 0.3 + mouseForceZ * 0.8;
   for (let i = 0, idx = 0; i < dustCount; i++, idx += 3) {
     const d = dustData[i];
     const floatTime = time * d.floatFreq + d.floatPhase;
