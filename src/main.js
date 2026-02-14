@@ -32,7 +32,7 @@ const SETTINGS = isMobile ? {
   sparkleCount: 1000,
   wispCount: 2000,
   dustCount: 30000,
-  treeCount: 1300,
+  treeCount: 2000,
   groundSegments: 128,
   shadowMapSize: 4096,
   pixelRatio: Math.min(window.devicePixelRatio, 2),
@@ -44,9 +44,9 @@ const SETTINGS = isMobile ? {
 
 // --- 1. CORE SETUP ---
 const scene = new THREE.Scene()
-const nightColor = 0x040812;
+const nightColor = 0x0a1428; // Lighter background color
 scene.background = new THREE.Color(nightColor);
-scene.fog = new THREE.FogExp2(0x0a1525, SETTINGS.fogDensity);
+scene.fog = new THREE.FogExp2(0x0f1a30, isMobile ? 0.008 : 0.006); // Reduced fog density
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100000)
 camera.position.set(0, 25, 40);
 const renderer = new THREE.WebGLRenderer({
@@ -192,11 +192,18 @@ texture.wrapT = THREE.RepeatWrapping;
 return texture;
 }
 // --- 3. LIGHTING SYSTEM ---
-const ambientLight = new THREE.AmbientLight(0x4466aa, 0.35);
+// Ambient light
+const ambientLight = new THREE.AmbientLight(0x5577aa, isMobile ? 0.4 : 0.3);
 scene.add(ambientLight);
-// Moon light
-const moonLight = new THREE.DirectionalLight(0xaaccff, 0.7);
-moonLight.position.set(100, 100, 50);
+
+// Hemisphere light for sky/ground lighting
+const hemiLight = new THREE.HemisphereLight(0x6688aa, 0x223344, 0.3);
+hemiLight.position.set(0, 50, 0);
+scene.add(hemiLight);
+
+// Moon light - main directional light
+const moonLight = new THREE.DirectionalLight(0xaaccee, isMobile ? 0.7 : 0.6);
+moonLight.position.set(50, 80, 80);
 moonLight.castShadow = SETTINGS.enableShadows;
 if (SETTINGS.enableShadows) {
   moonLight.shadow.mapSize.width = SETTINGS.shadowMapSize;
@@ -210,9 +217,15 @@ if (SETTINGS.enableShadows) {
   moonLight.shadow.radius = 2;
 }
 scene.add(moonLight);
-// Cold rim light
-const rimLight = new THREE.DirectionalLight(0x223355, 0.25);
-rimLight.position.set(-50, 30, -50);
+
+// Point light for local illumination
+const pointLight = new THREE.PointLight(0xffffff, 0.5, 100);
+pointLight.position.set(0, 30, 40);
+scene.add(pointLight);
+
+// Rim light
+const rimLight = new THREE.DirectionalLight(0x3355aa, 0.3);
+rimLight.position.set(-30, 30, -30);
 scene.add(rimLight);
 // --- 4. TERRAIN ENGINE ---
 function getTerrainHeight(x, z) {
@@ -248,17 +261,135 @@ groundGeo.computeVertexNormals();
 const ground = new THREE.Mesh(groundGeo, groundMat);
 ground.receiveShadow = SETTINGS.enableShadows;
 scene.add(ground);
-// --- 5. TREE FOREST FROM GLB ---
+// --- 5. TREE FOREST FROM GLB WITH FRUSTUM CULLING ---
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 const loader = new GLTFLoader();
 const treeInstances = [];
+const treeData = []; // Store tree metadata
+let treeModel = null; // Reference to original model
+
+// Frustum for culling
+const frustum = new THREE.Frustum();
+const cameraViewProjectionMatrix = new THREE.Matrix4();
+
+// Culling settings
+const CULLING_DISTANCE = isMobile ? 150 : 250; // Max render distance
+const FRUSTUM_MARGIN = isMobile ? 15 : 25; // Extra distance beyond frustum edges
+const FRUSTUM_CHECK_INTERVAL = isMobile ? 3 : 2; // Frames between checks
+let frameCount = 0;
+
+// Generate tree positions (but don't create meshes yet)
+function generateTreePositions() {
+  for (let i = 0; i < SETTINGS.treeCount; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    
+    // Weight distribution toward farther distances
+    const radiusRandom = Math.random();
+    const radius = radiusRandom < 0.2 ? 
+      12 + Math.random() * 80 :
+      52 + Math.random() * 200;
+    
+    const x = Math.cos(angle) * radius;
+    const z = Math.sin(angle) * radius;
+    const y = getTerrainHeight(x, z) - 5;
+    
+    // Smaller trees at distance
+    const distanceFactor = -radius / 352;
+    const scale = (0.13 + Math.random() * 0.1) * (1.2 - distanceFactor * 0.4);
+    const rotY = Math.random() * Math.PI * 2;
+    
+    treeData.push({
+      x, y, z,
+      scale,
+      rotY,
+      radius,
+      mesh: null, // Will be created when needed
+      inView: false
+    });
+  }
+}
+
+// Create a tree mesh instance
+function createTreeInstance(data) {
+  if (!treeModel || data.mesh) return;
+  
+  const treeClone = treeModel.clone();
+  treeClone.position.set(data.x, data.y, data.z);
+  treeClone.scale.setScalar(data.scale);
+  treeClone.rotation.y = data.rotY;
+  
+  scene.add(treeClone);
+  data.mesh = treeClone;
+  treeInstances.push(treeClone);
+}
+
+// Remove a tree mesh instance
+function removeTreeInstance(data) {
+  if (!data.mesh) return;
+  
+  scene.remove(data.mesh);
+  const index = treeInstances.indexOf(data.mesh);
+  if (index > -1) {
+    treeInstances.splice(index, 1);
+  }
+  data.mesh = null;
+}
+
+// Check which trees should be visible
+function updateTreeVisibility() {
+  // Update frustum
+  camera.updateMatrixWorld();
+  cameraViewProjectionMatrix.multiplyMatrices(
+    camera.projectionMatrix,
+    camera.matrixWorldInverse
+  );
+  frustum.setFromProjectionMatrix(cameraViewProjectionMatrix);
+  
+  const camPos = camera.position;
+  
+  for (let i = 0; i < treeData.length; i++) {
+    const data = treeData[i];
+    
+    // Distance check
+    const dx = data.x - camPos.x;
+    const dz = data.z - camPos.z;
+    const distanceSq = dx * dx + dz * dz;
+    
+    if (distanceSq > CULLING_DISTANCE * CULLING_DISTANCE) {
+      // Too far, remove if exists
+      if (data.mesh) {
+        removeTreeInstance(data);
+        data.inView = false;
+      }
+      continue;
+    }
+    
+    // Frustum check with expanded margin (render slightly beyond visible area)
+    const expandedBoundingSphere = new THREE.Sphere(
+      new THREE.Vector3(data.x, data.y + 5, data.z),
+      data.scale * 10 + FRUSTUM_MARGIN // Add margin to prevent pop-in
+    );
+    
+    const isInFrustum = frustum.intersectsSphere(expandedBoundingSphere);
+    
+    if (isInFrustum && !data.mesh) {
+      // In view but not created, create it
+      createTreeInstance(data);
+      data.inView = true;
+    } else if (!isInFrustum && data.mesh) {
+      // Not in view but exists, remove it
+      removeTreeInstance(data);
+      data.inView = false;
+    }
+  }
+}
 
 // Load tree model
 loader.load(
   '/tree.glb',
   (gltf) => {
-    const treeModel = gltf.scene;
+    treeModel = gltf.scene;
     
     // Setup shadows for the model
     if (SETTINGS.enableShadows) {
@@ -270,38 +401,13 @@ loader.load(
       });
     }
     
-    // Create instances with density increasing at distance
-    for (let i = 0; i < SETTINGS.treeCount; i++) {
-      const treeClone = treeModel.clone();
-      
-      const angle = Math.random() * Math.PI * 2;
-      
-      // Weight distribution toward farther distances
-      const radiusRandom = Math.random();
-      const radius = radiusRandom < 0.2 ? 
-        12 + Math.random() * 80 :
-        52 + Math.random() * 200;
-      
-      const x = Math.cos(angle) * radius;
-      const z = Math.sin(angle) * radius;
-      const y = getTerrainHeight(x, z) - 5;
-      
-      // Smaller trees at distance
-      const distanceFactor = -radius / 352;
-      const scale = (0.13 + Math.random() * 0.1) * (1.2 - distanceFactor * 0.4);
-      const rotY = Math.random() * Math.PI * 2;
-      
-      treeClone.position.set(x, y, z);
-      treeClone.scale.setScalar(scale);
-      treeClone.rotation.y = rotY;
-      
-      scene.add(treeClone);
-      treeInstances.push(treeClone);
-    }
+    // Generate positions
+    generateTreePositions();
+    
+    // Do initial visibility check
+    updateTreeVisibility();
   },
-  (progress) => {
-    console.log('Loading tree model:', (progress.loaded / progress.total * 100) + '%');
-  },
+  undefined,
   (error) => {
     console.error('Error loading tree model:', error);
   }
@@ -632,6 +738,7 @@ const dustSystem = new THREE.Points(dustGeo, dustMat);
 scene.add(dustSystem);
 // --- 7. ANIMATION LOOP ---
 const clock = new THREE.Clock();
+
 function onWindowResize() {
 camera.aspect = window.innerWidth / window.innerHeight;
 camera.updateProjectionMatrix();
@@ -661,6 +768,12 @@ function animate() {
   const delta = clock.getDelta();
   
   updateWind(time, delta);
+  
+  // Update tree visibility based on frustum (not every frame for performance)
+  frameCount++;
+  if (frameCount % FRUSTUM_CHECK_INTERVAL === 0 && treeModel) {
+    updateTreeVisibility();
+  }
   
   // Check if mouse stopped moving (after 100ms of no movement)
   if (!isMobile && Date.now() - mouse.lastMoveTime > 100) {
