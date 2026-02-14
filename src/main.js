@@ -2,113 +2,148 @@ import './style.css'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-// Performance Scaling Factors
-const settings = {
-    treeCount: isMobile ? 300 : 1300,
-    bgSnow: isMobile ? 10000 : 50000,
-    mainSnow: isMobile ? 8000 : 40000,
-    closeSnow: isMobile ? 500 : 3000,
-    vortex: isMobile ? 200 : 1000,
-    dust: isMobile ? 5000 : 30000,
-    groundRes: isMobile ? 64 : 128, // Lower terrain geometry detail
-    shadowRes: isMobile ? 1024 : 4096
+// --- MOBILE DETECTION & PERFORMANCE SETTINGS ---
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+
+const SETTINGS = isMobile ? {
+  // Mobile: aggressive optimization
+  bgSnowCount: 8000,
+  mainSnowCount: 6000,
+  closeSnowCount: 400,
+  vortexCount: 150,
+  sparkleCount: 200,
+  wispCount: 300,
+  dustCount: 5000,
+  treeCount: 300,
+  groundSegments: 64,
+  shadowMapSize: 1024,
+  pixelRatio: 1,
+  enableShadows: false,
+  autoRotate: false,
+  fogDensity: 0.012,
+  textureSize: 32
+} : {
+  // Desktop: full quality
+  bgSnowCount: 50000,
+  mainSnowCount: 40000,
+  closeSnowCount: 3000,
+  vortexCount: 1000,
+  sparkleCount: 1000,
+  wispCount: 2000,
+  dustCount: 30000,
+  treeCount: 1300,
+  groundSegments: 128,
+  shadowMapSize: 4096,
+  pixelRatio: Math.min(window.devicePixelRatio, 2),
+  enableShadows: true,
+  autoRotate: true,
+  fogDensity: 0.008,
+  textureSize: 64
 };
+
 // --- 1. CORE SETUP ---
 const scene = new THREE.Scene()
 const nightColor = 0x040812;
 scene.background = new THREE.Color(nightColor);
-scene.fog = new THREE.FogExp2(0x0a1525, 0.008);
+scene.fog = new THREE.FogExp2(0x0a1525, SETTINGS.fogDensity);
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100000)
 camera.position.set(0, 25, 40);
 const renderer = new THREE.WebGLRenderer({
 canvas: document.querySelector('#bg'),
-antialias: true,
+antialias: !isMobile,
 powerPreference: "high-performance"
 })
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+renderer.setPixelRatio(SETTINGS.pixelRatio)
 renderer.setSize(window.innerWidth, window.innerHeight)
-renderer.shadowMap.enabled = true
-renderer.shadowMap.type = THREE.VSMShadowMap
+renderer.shadowMap.enabled = SETTINGS.enableShadows
+if (SETTINGS.enableShadows) {
+  renderer.shadowMap.type = THREE.VSMShadowMap
+}
 const controls = new OrbitControls(camera, renderer.domElement)
 controls.enableDamping = true
 controls.dampingFactor = 0.05
 controls.maxPolarAngle = Math.PI / 2 - 0.1;
-controls.autoRotate = true;
+controls.autoRotate = SETTINGS.autoRotate;
 controls.autoRotateSpeed = 0.2;
 // --- 2. TEXTURE GENERATORS ---
 function createSoftParticle() {
 const canvas = document.createElement('canvas');
-canvas.width = 64; canvas.height = 64;
+const size = SETTINGS.textureSize;
+canvas.width = size; canvas.height = size;
 const ctx = canvas.getContext('2d');
-const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+const gradient = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
 gradient.addColorStop(0, 'rgba(255,255,255,1)');
 gradient.addColorStop(0.3, 'rgba(255,255,255,0.8)');
 gradient.addColorStop(0.6, 'rgba(255,255,255,0.3)');
 gradient.addColorStop(1, 'rgba(255,255,255,0)');
 ctx.fillStyle = gradient;
-ctx.fillRect(0,0,64,64);
+ctx.fillRect(0,0,size,size);
 return new THREE.CanvasTexture(canvas);
 }
 function createSnowflakeTexture() {
 const canvas = document.createElement('canvas');
-canvas.width = 64; canvas.height = 64;
+const size = SETTINGS.textureSize;
+canvas.width = size; canvas.height = size;
 const ctx = canvas.getContext('2d');
 ctx.fillStyle = 'rgba(0,0,0,0)';
-ctx.fillRect(0,0,64,64);
+ctx.fillRect(0,0,size,size);
 ctx.strokeStyle = 'rgba(255,255,255,0.9)';
 ctx.lineWidth = 2;
 ctx.lineCap = 'round';
 // Draw 6-pointed snowflake
-ctx.translate(32, 32);
+ctx.translate(size/2, size/2);
+const branchLength = size * 0.3;
 for(let i = 0; i < 6; i++) {
 ctx.rotate(Math.PI / 3);
 ctx.beginPath();
 ctx.moveTo(0, 0);
-ctx.lineTo(0, -20);
+ctx.lineTo(0, -branchLength);
 // Small branches
-ctx.moveTo(0, -8);
-ctx.lineTo(-5, -13);
-ctx.moveTo(0, -8);
-ctx.lineTo(5, -13);
-ctx.moveTo(0, -14);
-ctx.lineTo(-4, -18);
-ctx.moveTo(0, -14);
-ctx.lineTo(4, -18);
+ctx.moveTo(0, -branchLength * 0.4);
+ctx.lineTo(-branchLength * 0.25, -branchLength * 0.65);
+ctx.moveTo(0, -branchLength * 0.4);
+ctx.lineTo(branchLength * 0.25, -branchLength * 0.65);
+ctx.moveTo(0, -branchLength * 0.7);
+ctx.lineTo(-branchLength * 0.2, -branchLength * 0.9);
+ctx.moveTo(0, -branchLength * 0.7);
+ctx.lineTo(branchLength * 0.2, -branchLength * 0.9);
 ctx.stroke();
 }
 return new THREE.CanvasTexture(canvas);
 }
 function createSparkleTexture() {
 const canvas = document.createElement('canvas');
-canvas.width = 32; canvas.height = 32;
+const size = SETTINGS.textureSize;
+canvas.width = size; canvas.height = size;
 const ctx = canvas.getContext('2d');
 // 4-point star sparkle
-const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+const gradient = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
 gradient.addColorStop(0, 'rgba(255,255,255,1)');
 gradient.addColorStop(0.1, 'rgba(200,220,255,0.8)');
 gradient.addColorStop(0.5, 'rgba(150,180,255,0.2)');
 gradient.addColorStop(1, 'rgba(100,150,255,0)');
 ctx.fillStyle = gradient;
-ctx.fillRect(0,0,32,32);
+ctx.fillRect(0,0,size,size);
 return new THREE.CanvasTexture(canvas);
 }
 
 function createSnowGroundTexture() {
 const canvas = document.createElement('canvas');
-canvas.width = 512;
-canvas.height = 512;
+const size = isMobile ? 256 : 512;
+canvas.width = size;
+canvas.height = size;
 const ctx = canvas.getContext('2d');
 
 // Base snow color - slightly off-white
 ctx.fillStyle = '#e8f0ff';
-ctx.fillRect(0, 0, 512, 512);
+ctx.fillRect(0, 0, size, size);
 
 // Add heavy grain/noise for snow texture
-for (let i = 0; i < 30000; i++) {
-  const x = Math.random() * 512;
-  const y = Math.random() * 512;
+const grainCount = isMobile ? 8000 : 30000;
+for (let i = 0; i < grainCount; i++) {
+  const x = Math.random() * size;
+  const y = Math.random() * size;
   const brightness = 200 + Math.random() * 55;
   const alpha = 0.5 + Math.random() * 0.5;
   ctx.fillStyle = `rgba(${brightness}, ${brightness}, ${brightness + 5}, ${alpha})`;
@@ -116,35 +151,39 @@ for (let i = 0; i < 30000; i++) {
 }
 
 // Add darker spots for depth variation
-for (let i = 0; i < 500; i++) {
-  const x = Math.random() * 512;
-  const y = Math.random() * 512;
-  const size = 2 + Math.random() * 6;
+const spotCount = isMobile ? 150 : 500;
+for (let i = 0; i < spotCount; i++) {
+  const x = Math.random() * size;
+  const y = Math.random() * size;
+  const spotSize = 2 + Math.random() * 6;
   const darkness = 180 + Math.random() * 40;
   ctx.fillStyle = `rgba(${darkness}, ${darkness}, ${darkness + 10}, 0.3)`;
   ctx.beginPath();
-  ctx.arc(x, y, size, 0, Math.PI * 2);
+  ctx.arc(x, y, spotSize, 0, Math.PI * 2);
   ctx.fill();
 }
 
 // Add bright sparkle spots
-for (let i = 0; i < 400; i++) {
-  const x = Math.random() * 512;
-  const y = Math.random() * 512;
-  const size = 1 + Math.random() * 2;
+const sparkleCount = isMobile ? 100 : 400;
+for (let i = 0; i < sparkleCount; i++) {
+  const x = Math.random() * size;
+  const y = Math.random() * size;
+  const sparkleSize = 1 + Math.random() * 2;
   ctx.fillStyle = `rgba(255, 255, 255, ${0.7 + Math.random() * 0.3})`;
-  ctx.fillRect(x, y, size, size);
+  ctx.fillRect(x, y, sparkleSize, sparkleSize);
 }
 
 // Add footprint-like indentations
-for (let i = 0; i < 100; i++) {
-  const x = Math.random() * 512;
-  const y = Math.random() * 512;
-  const size = 3 + Math.random() * 8;
-  ctx.fillStyle = 'rgba(200, 210, 220, 0.4)';
-  ctx.beginPath();
-  ctx.ellipse(x, y, size, size * 0.6, Math.random() * Math.PI, 0, Math.PI * 2);
-  ctx.fill();
+if (!isMobile) {
+  for (let i = 0; i < 100; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const indentSize = 3 + Math.random() * 8;
+    ctx.fillStyle = 'rgba(200, 210, 220, 0.4)';
+    ctx.beginPath();
+    ctx.ellipse(x, y, indentSize, indentSize * 0.6, Math.random() * Math.PI, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 const texture = new THREE.CanvasTexture(canvas);
@@ -158,16 +197,18 @@ scene.add(ambientLight);
 // Moon light
 const moonLight = new THREE.DirectionalLight(0xaaccff, 0.7);
 moonLight.position.set(100, 100, 50);
-moonLight.castShadow = true;
-moonLight.shadow.mapSize.width = 4096;
-moonLight.shadow.mapSize.height = 4096;
-moonLight.shadow.camera.far = 300;
-moonLight.shadow.camera.left = -150;
-moonLight.shadow.camera.right = 150;
-moonLight.shadow.camera.top = 150;
-moonLight.shadow.camera.bottom = -150;
-moonLight.shadow.bias = -0.0005;
-moonLight.shadow.radius = 2;
+moonLight.castShadow = SETTINGS.enableShadows;
+if (SETTINGS.enableShadows) {
+  moonLight.shadow.mapSize.width = SETTINGS.shadowMapSize;
+  moonLight.shadow.mapSize.height = SETTINGS.shadowMapSize;
+  moonLight.shadow.camera.far = 300;
+  moonLight.shadow.camera.left = -150;
+  moonLight.shadow.camera.right = 150;
+  moonLight.shadow.camera.top = 150;
+  moonLight.shadow.camera.bottom = -150;
+  moonLight.shadow.bias = -0.0005;
+  moonLight.shadow.radius = 2;
+}
 scene.add(moonLight);
 // Cold rim light
 const rimLight = new THREE.DirectionalLight(0x223355, 0.25);
@@ -181,7 +222,7 @@ return (Math.sin(x * 0.05) * 2) + (Math.cos(z * 0.05) * 2) + (Math.sin(x * 0.02 
 // Create snow texture first
 const snowGroundTexture = createSnowGroundTexture();
 
-const groundGeo = new THREE.PlaneGeometry(700, 700, 128, 128);
+const groundGeo = new THREE.PlaneGeometry(700, 700, SETTINGS.groundSegments, SETTINGS.groundSegments);
 groundGeo.rotateX(-Math.PI / 2);
 
 // Ensure UV coordinates are set correctly
@@ -191,7 +232,7 @@ for (let i = 0; i < uvs.count; i++) {
 }
 
 const groundMat = new THREE.MeshStandardMaterial({
-color: 0xffffff, // Changed to white to show texture better
+color: 0xffffff,
 roughness: 0.85, 
 metalness: 0.05,
 map: snowGroundTexture
@@ -205,31 +246,32 @@ posAttribute.setY(i, y - 5);
 }
 groundGeo.computeVertexNormals();
 const ground = new THREE.Mesh(groundGeo, groundMat);
-ground.receiveShadow = true;
+ground.receiveShadow = SETTINGS.enableShadows;
 scene.add(ground);
 // --- 5. TREE FOREST FROM GLB ---
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-const treeCount = 1300; // Increased from 280
 const loader = new GLTFLoader();
 const treeInstances = [];
 
 // Load tree model
 loader.load(
-  '/tree.glb', // Path to your GLB tree model
+  '/tree.glb',
   (gltf) => {
     const treeModel = gltf.scene;
     
     // Setup shadows for the model
-    treeModel.traverse((child) => {
-      if (child.isMesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-      }
-    });
+    if (SETTINGS.enableShadows) {
+      treeModel.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+    }
     
     // Create instances with density increasing at distance
-    for (let i = 0; i < treeCount; i++) {
+    for (let i = 0; i < SETTINGS.treeCount; i++) {
       const treeClone = treeModel.clone();
       
       const angle = Math.random() * Math.PI * 2;
@@ -237,8 +279,8 @@ loader.load(
       // Weight distribution toward farther distances
       const radiusRandom = Math.random();
       const radius = radiusRandom < 0.2 ? 
-        12 + Math.random() * 80 :  // 20% close (12-52)
-        52 + Math.random() * 200;  // 80% far (52-352)
+        12 + Math.random() * 80 :
+        52 + Math.random() * 200;
       
       const x = Math.cos(angle) * radius;
       const z = Math.sin(angle) * radius;
@@ -292,25 +334,25 @@ const mouse = {
   lastMoveTime: 0
 };
 
-// Mouse movement listener
-window.addEventListener('mousemove', (event) => {
-  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-  
-  // Convert to world-space attraction force (more subtle)
-  mouse.normalizedX = mouse.x * 0.25;
-  mouse.normalizedZ = -mouse.y * 0.25;
-  
-  mouse.isMoving = true;
-  mouse.lastMoveTime = Date.now();
-});
+// Mouse movement listener - disabled on mobile for performance
+if (!isMobile) {
+  window.addEventListener('mousemove', (event) => {
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    
+    mouse.normalizedX = mouse.x * 0.25;
+    mouse.normalizedZ = -mouse.y * 0.25;
+    
+    mouse.isMoving = true;
+    mouse.lastMoveTime = Date.now();
+  });
+}
 
 // ---- LAYER 1: Dense Background Snow (far, small, many) ----
-const bgSnowCount = 50000;
 const bgSnowGeo = new THREE.BufferGeometry();
-const bgSnowPos = new Float32Array(bgSnowCount * 3);
+const bgSnowPos = new Float32Array(SETTINGS.bgSnowCount * 3);
 const bgSnowData = [];
-for (let i = 0; i < bgSnowCount; i++) {
+for (let i = 0; i < SETTINGS.bgSnowCount; i++) {
 bgSnowPos[i * 3] = (Math.random() - 0.5) * 350;
 bgSnowPos[i * 3 + 1] = Math.random() * 150 - 25;
 bgSnowPos[i * 3 + 2] = (Math.random() - 0.5) * 350;
@@ -334,12 +376,11 @@ blending: THREE.AdditiveBlending
 const bgSnowSystem = new THREE.Points(bgSnowGeo, bgSnowMat);
 scene.add(bgSnowSystem);
 // ---- LAYER 2: Main Snowfall (medium distance, varied sizes) ----
-const mainSnowCount = 40000;
 const mainSnowGeo = new THREE.BufferGeometry();
-const mainSnowPos = new Float32Array(mainSnowCount * 3);
-const mainSnowSizes = new Float32Array(mainSnowCount);
+const mainSnowPos = new Float32Array(SETTINGS.mainSnowCount * 3);
+const mainSnowSizes = new Float32Array(SETTINGS.mainSnowCount);
 const mainSnowData = [];
-for (let i = 0; i < mainSnowCount; i++) {
+for (let i = 0; i < SETTINGS.mainSnowCount; i++) {
 mainSnowPos[i * 3] = (Math.random() - 0.5) * 250;
 mainSnowPos[i * 3 + 1] = Math.random() * 120 - 20;
 mainSnowPos[i * 3 + 2] = (Math.random() - 0.5) * 250;
@@ -389,13 +430,12 @@ blending: THREE.AdditiveBlending
 const mainSnowSystem = new THREE.Points(mainSnowGeo, mainSnowMat);
 scene.add(mainSnowSystem);
 // ---- LAYER 3: Close-up Large Flakes (near camera, detailed) ----
-const closeSnowCount = 3000;
 const closeSnowGeo = new THREE.BufferGeometry();
-const closeSnowPos = new Float32Array(closeSnowCount * 3);
-const closeSnowSizes = new Float32Array(closeSnowCount);
-const closeSnowRotations = new Float32Array(closeSnowCount);
+const closeSnowPos = new Float32Array(SETTINGS.closeSnowCount * 3);
+const closeSnowSizes = new Float32Array(SETTINGS.closeSnowCount);
+const closeSnowRotations = new Float32Array(SETTINGS.closeSnowCount);
 const closeSnowData = [];
-for (let i = 0; i < closeSnowCount; i++) {
+for (let i = 0; i < SETTINGS.closeSnowCount; i++) {
 closeSnowPos[i * 3] = (Math.random() - 0.5) * 80;
 closeSnowPos[i * 3 + 1] = Math.random() * 60 - 10;
 closeSnowPos[i * 3 + 2] = (Math.random() - 0.5) * 80;
@@ -452,11 +492,10 @@ blending: THREE.AdditiveBlending
 const closeSnowSystem = new THREE.Points(closeSnowGeo, closeSnowMat);
 scene.add(closeSnowSystem);
 // ---- LAYER 4: Swirling Vortex Particles ----
-const vortexCount = 1000;
 const vortexGeo = new THREE.BufferGeometry();
-const vortexPos = new Float32Array(vortexCount * 3);
+const vortexPos = new Float32Array(SETTINGS.vortexCount * 3);
 const vortexData = [];
-for (let i = 0; i < vortexCount; i++) {
+for (let i = 0; i < SETTINGS.vortexCount; i++) {
 const angle = Math.random() * Math.PI * 2;
 const radius = 5 + Math.random() * 60;
 const height = Math.random() * 80 - 10;
@@ -486,12 +525,11 @@ blending: THREE.AdditiveBlending
 const vortexSystem = new THREE.Points(vortexGeo, vortexMat);
 scene.add(vortexSystem);
 // ---- LAYER 5: Ground Frost Sparkles ----
-const sparkleCount = 1000;
 const sparkleGeo = new THREE.BufferGeometry();
-const sparklePos = new Float32Array(sparkleCount * 3);
-const sparkleSizes = new Float32Array(sparkleCount);
+const sparklePos = new Float32Array(SETTINGS.sparkleCount * 3);
+const sparkleSizes = new Float32Array(SETTINGS.sparkleCount);
 const sparkleData = [];
-for (let i = 0; i < sparkleCount; i++) {
+for (let i = 0; i < SETTINGS.sparkleCount; i++) {
 const x = (Math.random() - 0.5) * 200;
 const z = (Math.random() - 0.5) * 200;
 const y = getTerrainHeight(x, z) - 4.8;
@@ -541,11 +579,10 @@ blending: THREE.AdditiveBlending
 const sparkleSystem = new THREE.Points(sparkleGeo, sparkleMat);
 scene.add(sparkleSystem);
 // ---- LAYER 6: Blowing Snow Wisps (horizontal streaks) ----
-const wispCount = 2000;
 const wispGeo = new THREE.BufferGeometry();
-const wispPos = new Float32Array(wispCount * 3);
+const wispPos = new Float32Array(SETTINGS.wispCount * 3);
 const wispData = [];
-for (let i = 0; i < wispCount; i++) {
+for (let i = 0; i < SETTINGS.wispCount; i++) {
 wispPos[i * 3] = (Math.random() - 0.5) * 300;
 wispPos[i * 3 + 1] = Math.random() * 30 - 5;
 wispPos[i * 3 + 2] = (Math.random() - 0.5) * 300;
@@ -568,11 +605,10 @@ blending: THREE.AdditiveBlending
 const wispSystem = new THREE.Points(wispGeo, wispMat);
 scene.add(wispSystem);
 // ---- LAYER 7: Snow Dust (ultra fine ambient particles) ----
-const dustCount = 30000;
 const dustGeo = new THREE.BufferGeometry();
-const dustPos = new Float32Array(dustCount * 3);
+const dustPos = new Float32Array(SETTINGS.dustCount * 3);
 const dustData = [];
-for (let i = 0; i < dustCount; i++) {
+for (let i = 0; i < SETTINGS.dustCount; i++) {
 dustPos[i * 3] = (Math.random() - 0.5) * 200;
 dustPos[i * 3 + 1] = Math.random() * 100 - 10;
 dustPos[i * 3 + 2] = (Math.random() - 0.5) * 200;
@@ -627,7 +663,7 @@ function animate() {
   updateWind(time, delta);
   
   // Check if mouse stopped moving (after 100ms of no movement)
-  if (Date.now() - mouse.lastMoveTime > 100) {
+  if (!isMobile && Date.now() - mouse.lastMoveTime > 100) {
     mouse.isMoving = false;
   }
   
@@ -635,15 +671,17 @@ function animate() {
   const windX = wind.baseX + wind.gustX * wind.gustStrength;
   const windZ = wind.baseZ + wind.gustZ * wind.gustStrength;
   
-  // Mouse attraction force (subtle but visible)
-  const mouseForceX = mouse.isMoving ? mouse.normalizedX * 1.2 : mouse.normalizedX * 0.6;
-  const mouseForceZ = mouse.isMoving ? mouse.normalizedZ * 1.2 : mouse.normalizedZ * 0.6;
+  // Mouse attraction force (disabled on mobile)
+  const mouseForceX = isMobile ? 0 : (mouse.isMoving ? mouse.normalizedX * 1.2 : mouse.normalizedX * 0.6);
+  const mouseForceZ = isMobile ? 0 : (mouse.isMoving ? mouse.normalizedZ * 1.2 : mouse.normalizedZ * 0.6);
   
-  // Camera sway based on mouse position
-  const targetCameraX = mouse.x * 8;
-  const targetCameraY = 25 + mouse.y * 5;
-  camera.position.x += (targetCameraX - camera.position.x) * 0.05;
-  camera.position.y += (targetCameraY - camera.position.y) * 0.03;
+  // Camera sway based on mouse position (disabled on mobile)
+  if (!isMobile) {
+    const targetCameraX = mouse.x * 8;
+    const targetCameraY = 25 + mouse.y * 5;
+    camera.position.x += (targetCameraX - camera.position.x) * 0.05;
+    camera.position.y += (targetCameraY - camera.position.y) * 0.03;
+  }
   
   // Update shared uniforms once
   const timeUniform = { value: time };
@@ -653,7 +691,7 @@ function animate() {
   
   // Background snow
   const bgPos = bgSnowSystem.geometry.attributes.position.array;
-  for (let i = 0, idx = 0; i < bgSnowCount; i++, idx += 3) {
+  for (let i = 0, idx = 0; i < SETTINGS.bgSnowCount; i++, idx += 3) {
     const d = bgSnowData[i];
     const drift = Math.sin(time * d.driftFreq + d.driftPhase) * d.driftAmp;
     
@@ -667,7 +705,6 @@ function animate() {
       bgPos[idx + 2] = (Math.random() - 0.5) * 350;
     }
     
-    // Wrap with modulo alternative
     if (bgPos[idx] > 175) bgPos[idx] -= 350;
     else if (bgPos[idx] < -175) bgPos[idx] += 350;
     if (bgPos[idx + 2] > 175) bgPos[idx + 2] -= 350;
@@ -677,7 +714,7 @@ function animate() {
   
   // Main snow
   const mainPos = mainSnowSystem.geometry.attributes.position.array;
-  for (let i = 0, idx = 0; i < mainSnowCount; i++, idx += 3) {
+  for (let i = 0, idx = 0; i < SETTINGS.mainSnowCount; i++, idx += 3) {
     const d = mainSnowData[i];
     const wobbleTime = time * d.wobbleFreq + d.wobblePhase;
     const wobble = Math.sin(wobbleTime) * d.wobbleAmp;
@@ -700,10 +737,10 @@ function animate() {
   }
   mainSnowSystem.geometry.attributes.position.needsUpdate = true;
   
-  // Close-up flakes (most responsive to mouse)
+  // Close-up flakes
   const closePos = closeSnowSystem.geometry.attributes.position.array;
   const closeRot = closeSnowSystem.geometry.attributes.rotation.array;
-  for (let i = 0, idx = 0; i < closeSnowCount; i++, idx += 3) {
+  for (let i = 0, idx = 0; i < SETTINGS.closeSnowCount; i++, idx += 3) {
     const d = closeSnowData[i];
     const sway = Math.sin(time * d.swayFreq + d.swayPhase) * d.swayAmp;
     
@@ -729,7 +766,7 @@ function animate() {
   // Vortex particles
   const vortexPosArr = vortexSystem.geometry.attributes.position.array;
   const orbitDelta = 0.01;
-  for (let i = 0, idx = 0; i < vortexCount; i++, idx += 3) {
+  for (let i = 0, idx = 0; i < SETTINGS.vortexCount; i++, idx += 3) {
     const d = vortexData[i];
     d.angle += d.orbitSpeed * orbitDelta;
     const radiusNow = d.radius + Math.sin(time * d.radiusOscSpeed + d.radiusOscillation) * 5;
@@ -745,10 +782,10 @@ function animate() {
   }
   vortexSystem.geometry.attributes.position.needsUpdate = true;
   
-  // Blowing wisps (highly responsive to mouse)
+  // Blowing wisps
   const wispPosArr = wispSystem.geometry.attributes.position.array;
   const gustMult = 1 + wind.gustStrength;
-  for (let i = 0, idx = 0; i < wispCount; i++, idx += 3) {
+  for (let i = 0, idx = 0; i < SETTINGS.wispCount; i++, idx += 3) {
     const d = wispData[i];
     
     wispPosArr[idx] += d.speed * gustMult + mouseForceX * 2.5;
@@ -767,7 +804,7 @@ function animate() {
   const dustPosArr = dustSystem.geometry.attributes.position.array;
   const windXDust = windX * 0.3 + mouseForceX * 0.8;
   const windZDust = windZ * 0.3 + mouseForceZ * 0.8;
-  for (let i = 0, idx = 0; i < dustCount; i++, idx += 3) {
+  for (let i = 0, idx = 0; i < SETTINGS.dustCount; i++, idx += 3) {
     const d = dustData[i];
     const floatTime = time * d.floatFreq + d.floatPhase;
     
