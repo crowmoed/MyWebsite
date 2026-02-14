@@ -1,3 +1,6 @@
+
+
+
 import './style.css'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
@@ -319,7 +322,7 @@ function generateTreePositions() {
     
     if (radiusRandom < 0.15) {
       // Close ring (15%)
-      radius = 12 + Math.random() * 60;
+      radius = 20 + Math.random() * 60;
     } else if (radiusRandom < 0.45) {
       // Mid ring (30%)
       radius = 72 + Math.random() * 100;
