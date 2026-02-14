@@ -15,13 +15,13 @@ const SETTINGS = isMobile ? {
   sparkleCount: 200,
   wispCount: 300,
   dustCount: 5000,
-  treeCount: 1000,
+  treeCount: 800, // Reduced from 1500
   groundSegments: 64,
   shadowMapSize: 1024,
   pixelRatio: 1,
   enableShadows: false,
   autoRotate: false,
-  fogDensity: 0.012,
+  fogDensity: 0.02,
   textureSize: 32
 } : {
   // Desktop: full quality
@@ -32,14 +32,14 @@ const SETTINGS = isMobile ? {
   sparkleCount: 1000,
   wispCount: 2000,
   dustCount: 30000,
-  treeCount: 2000,
+  treeCount: 800, // Reduced from 1500 but better distributed
   groundSegments: 128,
   shadowMapSize: 4096,
   pixelRatio: Math.min(window.devicePixelRatio, 2),
   enableShadows: true,
   autoRotate: true,
   fogDensity: 0.008,
-  textureSize: 64
+  textureSize: 32
 };
 
 // --- 1. CORE SETUP ---
@@ -261,7 +261,7 @@ groundGeo.computeVertexNormals();
 const ground = new THREE.Mesh(groundGeo, groundMat);
 ground.receiveShadow = SETTINGS.enableShadows;
 scene.add(ground);
-// --- 5. TREE FOREST FROM GLB WITH FRUSTUM CULLING ---
+// --- 5. OPTIMIZED TREE FOREST WITH SPATIAL PARTITIONING ---
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 const loader = new GLTFLoader();
@@ -273,40 +273,88 @@ let treeModel = null; // Reference to original model
 const frustum = new THREE.Frustum();
 const cameraViewProjectionMatrix = new THREE.Matrix4();
 
-// Culling settings
-const CULLING_DISTANCE = isMobile ? 150 : 250; // Max render distance
-const FRUSTUM_MARGIN = isMobile ? 15 : 25; // Extra distance beyond frustum edges
-const FRUSTUM_CHECK_INTERVAL = isMobile ? 3 : 2; // Frames between checks
+// Optimized culling settings
+const CULLING_DISTANCE = isMobile ? 120 : 200; // Reduced max render distance
+const FRUSTUM_MARGIN = isMobile ? 10 : 20; // Reduced margin
+const FRUSTUM_CHECK_INTERVAL = isMobile ? 4 : 3; // Check less frequently
+const GRID_CELL_SIZE = 50; // Size of spatial grid cells
 let frameCount = 0;
 
-// Generate tree positions (but don't create meshes yet)
+// Spatial grid for faster lookups
+const spatialGrid = new Map();
+
+// Helper to get grid key from position
+function getGridKey(x, z) {
+  const gridX = Math.floor(x / GRID_CELL_SIZE);
+  const gridZ = Math.floor(z / GRID_CELL_SIZE);
+  return `${gridX},${gridZ}`;
+}
+
+// Get nearby grid cells based on camera position
+function getNearbyGridKeys(camX, camZ, radius) {
+  const keys = new Set();
+  const cellRadius = Math.ceil(radius / GRID_CELL_SIZE);
+  const centerX = Math.floor(camX / GRID_CELL_SIZE);
+  const centerZ = Math.floor(camZ / GRID_CELL_SIZE);
+  
+  for (let x = centerX - cellRadius; x <= centerX + cellRadius; x++) {
+    for (let z = centerZ - cellRadius; z <= centerZ + cellRadius; z++) {
+      keys.add(`${x},${z}`);
+    }
+  }
+  return keys;
+}
+
+// Generate tree positions with better distribution
 function generateTreePositions() {
+  treeData.length = 0;
+  spatialGrid.clear();
+
   for (let i = 0; i < SETTINGS.treeCount; i++) {
     const angle = Math.random() * Math.PI * 2;
-    
-    // Weight distribution toward farther distances
+
+    // Better distribution: more trees in distance for populated background
     const radiusRandom = Math.random();
-    const radius = radiusRandom < 0.2 ? 
-      12 + Math.random() * 80 :
-      52 + Math.random() * 200;
+    let radius;
     
+    if (radiusRandom < 0.15) {
+      // Close ring (15%)
+      radius = 12 + Math.random() * 60;
+    } else if (radiusRandom < 0.45) {
+      // Mid ring (30%)
+      radius = 72 + Math.random() * 100;
+    } else {
+      // Far ring (55%) - extended to fill background
+      radius = 172 + Math.random() * 280; // Extended from 200 to 280 for better bg coverage
+    }
+
     const x = Math.cos(angle) * radius;
     const z = Math.sin(angle) * radius;
     const y = getTerrainHeight(x, z) - 5;
-    
-    // Smaller trees at distance
-    const distanceFactor = -radius / 352;
-    const scale = (0.13 + Math.random() * 0.1) * (1.2 - distanceFactor * 0.4);
+
+    // Scale based on distance - much larger trees for denser look
+    const distanceFactor = radius / 452;
+    const scale = (5.15 + Math.random() * 0.2) * (1 + distanceFactor * 1.8); // Increased from 0.13-0.23 to 0.25-0.45 base
+
     const rotY = Math.random() * Math.PI * 2;
-    
-    treeData.push({
+
+    const tree = {
       x, y, z,
       scale,
       rotY,
       radius,
-      mesh: null, // Will be created when needed
-      inView: false
-    });
+      mesh: null,
+      inView: false,
+      gridKey: getGridKey(x, z)
+    };
+    
+    treeData.push(tree);
+    
+    // Add to spatial grid
+    if (!spatialGrid.has(tree.gridKey)) {
+      spatialGrid.set(tree.gridKey, []);
+    }
+    spatialGrid.get(tree.gridKey).push(tree);
   }
 }
 
@@ -336,7 +384,7 @@ function removeTreeInstance(data) {
   data.mesh = null;
 }
 
-// Check which trees should be visible
+// Optimized visibility check using spatial partitioning
 function updateTreeVisibility() {
   // Update frustum
   camera.updateMatrixWorld();
@@ -348,37 +396,64 @@ function updateTreeVisibility() {
   
   const camPos = camera.position;
   
-  for (let i = 0; i < treeData.length; i++) {
-    const data = treeData[i];
+  // Get only nearby grid cells to check (for optimization)
+  const nearbyKeys = getNearbyGridKeys(camPos.x, camPos.z, CULLING_DISTANCE + FRUSTUM_MARGIN);
+  
+  // Check all trees - prioritize nearby ones using spatial grid
+  // First, quickly process nearby trees using spatial grid
+  nearbyKeys.forEach(key => {
+    const treesInCell = spatialGrid.get(key);
+    if (!treesInCell) return;
     
-    // Distance check
-    const dx = data.x - camPos.x;
-    const dz = data.z - camPos.z;
-    const distanceSq = dx * dx + dz * dz;
-    
-    if (distanceSq > CULLING_DISTANCE * CULLING_DISTANCE) {
-      // Too far, remove if exists
-      if (data.mesh) {
+    for (const data of treesInCell) {
+      // Distance check
+      const dx = data.x - camPos.x;
+      const dz = data.z - camPos.z;
+      const distanceSq = dx * dx + dz * dz;
+      
+      // Frustum check with margin
+      const expandedBoundingSphere = new THREE.Sphere(
+        new THREE.Vector3(data.x, data.y + 5, data.z),
+        data.scale * 10 + FRUSTUM_MARGIN
+      );
+      
+      const isInFrustum = frustum.intersectsSphere(expandedBoundingSphere);
+      
+      // Keep trees if they're in frustum, regardless of distance (for background)
+      // Only cull if too close and out of frustum
+      if (isInFrustum && !data.mesh) {
+        createTreeInstance(data);
+        data.inView = true;
+      } else if (!isInFrustum && data.mesh && distanceSq < CULLING_DISTANCE * CULLING_DISTANCE) {
+        // Only remove if close enough to have been checked AND not in frustum
         removeTreeInstance(data);
         data.inView = false;
       }
-      continue;
     }
+  });
+  
+  // Second pass: check far trees that aren't in nearby grid cells but might be visible
+  // This keeps the background populated
+  for (let i = 0; i < treeData.length; i++) {
+    const data = treeData[i];
     
-    // Frustum check with expanded margin (render slightly beyond visible area)
+    // Skip if already processed in nearby cells
+    if (nearbyKeys.has(data.gridKey)) continue;
+    
+    // Check if far tree is in frustum
     const expandedBoundingSphere = new THREE.Sphere(
       new THREE.Vector3(data.x, data.y + 5, data.z),
-      data.scale * 10 + FRUSTUM_MARGIN // Add margin to prevent pop-in
+      data.scale * 10 + FRUSTUM_MARGIN
     );
     
     const isInFrustum = frustum.intersectsSphere(expandedBoundingSphere);
     
     if (isInFrustum && !data.mesh) {
-      // In view but not created, create it
+      // Far tree is visible, create it for background
       createTreeInstance(data);
       data.inView = true;
     } else if (!isInFrustum && data.mesh) {
-      // Not in view but exists, remove it
+      // Far tree not visible, remove it
       removeTreeInstance(data);
       data.inView = false;
     }
@@ -387,21 +462,28 @@ function updateTreeVisibility() {
 
 // Load tree model
 loader.load(
-  '/tree.glb',
+  '/pine_tree_low_poly.glb',
   (gltf) => {
     treeModel = gltf.scene;
     
-    // Setup shadows for the model
-    if (SETTINGS.enableShadows) {
-      treeModel.traverse((child) => {
-        if (child.isMesh) {
+    // Optimize tree model materials
+    treeModel.traverse((child) => {
+      if (child.isMesh) {
+        // Setup shadows
+        if (SETTINGS.enableShadows) {
           child.castShadow = true;
           child.receiveShadow = true;
         }
-      });
-    }
+        
+        // Optimize materials
+        // if (child.material) {
+        //   child.material.side = THREE.FrontSide; // Only render front faces
+        //   child.material.flatShading = false;
+        // }
+      }
+    });
     
-    // Generate positions
+    // Generate positions with better distribution
     generateTreePositions();
     
     // Do initial visibility check
@@ -790,10 +872,19 @@ function animate() {
   
   // Camera sway based on mouse position (disabled on mobile)
   if (!isMobile) {
-    const targetCameraX = mouse.x * 8;
-    const targetCameraY = 25 + mouse.y * 5;
+    const targetCameraX = mouse.x * 12;
+    const targetCameraY = 25 + mouse.y * 6;
     camera.position.x += (targetCameraX - camera.position.x) * 0.05;
     camera.position.y += (targetCameraY - camera.position.y) * 0.03;
+  }
+
+  if (isMobile){
+
+  camera.position.x = Math.cos(time * 0.1) * 40;
+  camera.position.z = Math.sin(time * 0.1) * 40;
+  camera.position.y = 25;
+
+  camera.lookAt(0, 25 * 0.5, 0); // adjust look target if needed
   }
   
   // Update shared uniforms once

@@ -7,7 +7,7 @@ interface Props {
   /** Absolute path for social share image (e.g. /cristianopinto.png). Uses origin from current URL. */
   image?: string;
 }
-const { title = 'Cristiano Pinto – Backend Developer', description = 'Backend developer portfolio. Projects in Python, Java, C++, ML, game dev, and systems. Available for new opportunities.', image = '/cristianopinto.png' } = Astro.props;
+const { title = 'Cristiano Pinto', description = 'Backend developer portfolio. Projects in Python, Java, C++, ML, game dev, and systems. Available for new opportunities.', image = '/cristianopinto.png' } = Astro.props;
 
 const siteOrigin = Astro.url.origin;
 const canonicalURL = new URL(Astro.url.pathname, siteOrigin).href;
@@ -39,7 +39,7 @@ const siteName = 'Cristiano Pinto';
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/cristianopinto-circle.png" />
     <style is:global>
   .transition-fade {
     transition: opacity 0.4s ease-in-out, backdrop-filter 0.4s ease-in-out;
