@@ -15,7 +15,7 @@ const SETTINGS = isMobile ? {
   sparkleCount: 200,
   wispCount: 300,
   dustCount: 5000,
-  treeCount: 300,
+  treeCount: 1000,
   groundSegments: 64,
   shadowMapSize: 1024,
   pixelRatio: 1,
