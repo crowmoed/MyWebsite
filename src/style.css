@@ -1182,12 +1182,12 @@ h1 {
 
 
 
-
-
 @media (max-width: 768px) {
   html, body {
     width: 100vw;
     max-width: 100vw;
+    height: auto;
+    min-height: 100dvh;
     overflow-x: hidden;
     overflow-y: auto;
     touch-action: pan-x pan-y;
@@ -1213,21 +1213,23 @@ h1 {
   .grid-container {
     width: 100vw;
     max-width: 100vw;
+    height: auto;
     min-height: 100dvh;
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto auto;
     border: none;
-    overflow: visible;
+    overflow-x: hidden;
+    overflow-y: visible;
     box-sizing: border-box;
   }
 
   #swup {
     width: 100%;
     max-width: 100vw;
+    height: auto;
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto auto;
     border: none;
-    height: auto;
     padding: 0;
   }
 
