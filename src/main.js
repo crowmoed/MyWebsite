@@ -516,28 +516,55 @@ nextGust: 2
 };
 
 // Mouse tracking for snow attraction
+// At the top with your mouse object
 const mouse = {
   x: 0,
   y: 0,
   normalizedX: 0,
   normalizedZ: 0,
   isMoving: false,
-  lastMoveTime: 0
+  lastMoveTime: 0,
+  onScreen: false  // Add this
 };
 
-// Mouse movement listener - disabled on mobile for performance
 if (!isMobile) {
+  const setStopped = () => {
+    mouse.isMoving = false;
+    mouse.onScreen = false;
+  };
+
   window.addEventListener('mousemove', (event) => {
+    const buffer = 5;
+    const isAtEdge = 
+      event.clientX <= buffer || 
+      event.clientX >= (window.innerWidth - buffer) || 
+      event.clientY <= buffer || 
+      event.clientY >= (window.innerHeight - buffer);
+
+    if (isAtEdge) {
+      setStopped();
+      return; 
+    }
+
+    mouse.onScreen = true;
+    mouse.isMoving = true;
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
     
     mouse.normalizedX = mouse.x * 0.25;
     mouse.normalizedZ = -mouse.y * 0.25;
-    
-    mouse.isMoving = true;
     mouse.lastMoveTime = Date.now();
   });
+
+  window.addEventListener('mouseout', (e) => {
+    if (!e.relatedTarget || e.relatedTarget.nodeName === "HTML") {
+      setStopped();
+    }
+  });
+
+  window.addEventListener('blur', setStopped);
 }
+
 
 // ---- LAYER 1: Dense Background Snow (far, small, many) ----
 const bgSnowGeo = new THREE.BufferGeometry();
@@ -874,21 +901,22 @@ function animate() {
   const mouseForceZ = isMobile ? 0 : (mouse.isMoving ? mouse.normalizedZ * 1.2 : mouse.normalizedZ * 0.6);
   
   // Camera sway based on mouse position (disabled on mobile)
-  if (!isMobile) {
+    if (!isMobile && mouse.onScreen) {
     const targetCameraX = mouse.x * 12;
-    const targetCameraY = 25 + mouse.y * 6;
+    const targetCameraY = 25 + (mouse.y * 6);
+    const fixedZ = 40; // Maintain the same distance as mobile
+
+    // Smoothly interpolate position
     camera.position.x += (targetCameraX - camera.position.x) * 0.05;
     camera.position.y += (targetCameraY - camera.position.y) * 0.03;
-  }
+    camera.position.z += (fixedZ - camera.position.z) * 0.05;
 
-  if (isMobile){
+    // CRITICAL: Re-center the focus so it doesn't "drift" away
+    camera.lookAt(0, 12.5, 0); 
+    
+    } else if (!isMobile) {
 
-  camera.position.x = Math.cos(time * 0.1) * 40;
-  camera.position.z = Math.sin(time * 0.1) * 40;
-  camera.position.y = 25;
-
-  camera.lookAt(0, 25 * 0.5, 0); // adjust look target if needed
-  }
+    }
   
   // Update shared uniforms once
   const timeUniform = { value: time };
