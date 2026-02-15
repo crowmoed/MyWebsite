@@ -1195,14 +1195,17 @@ h1 {
     flex-direction: row;
   }
   
-  
+  body {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
 
   .grid-container {
-    height: 100dvh;
+    min-height: 100dvh; /* Changed from height */
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto auto;
     border: none;
-    overflow: auto;
+    overflow: visible; /* Changed from auto */
   }
 
   #swup {
