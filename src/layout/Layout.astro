@@ -17,7 +17,8 @@ const siteName = 'Cristiano Pinto';
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">    <meta name="description" content={description} />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content={description} />
     <link rel="canonical" href={canonicalURL} />
     <title>{title}</title>
 
@@ -40,6 +41,19 @@ const siteName = 'Cristiano Pinto';
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
     <link rel="icon" type="image/svg+xml" href="/cristianopinto-circle.png" />
     <style is:global>
+  html, body {
+    overflow: hidden;
+    height: 100%;
+    width: 100%;
+  }
+
+  .grid-container {
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: 100vh;
+    width: 100%;
+  }
+
   .transition-fade {
     transition: opacity 0.4s ease-in-out, backdrop-filter 0.4s ease-in-out;
     
@@ -58,9 +72,15 @@ const siteName = 'Cristiano Pinto';
   </head>
   
   <body>
-    <canvas id="bg" style="position: fixed; top: 0; left: 0; z-index: -99;"></canvas>
+    <canvas id="bg" style="position: fixed; top: 0; left: 0; z-index: -99; width: 100%; height: 100%;"></canvas>
     <script src="../main.js"></script>
 
+    <script>
+      // Trigger resize after page transitions
+      document.addEventListener('DOMContentLoaded', () => {
+        window.dispatchEvent(new Event('resize'));
+      });
+    </script>
 
     <main id="swup" class="transition-fade">
       <div class="grid-container ">
@@ -113,10 +133,16 @@ const siteName = 'Cristiano Pinto';
     <script>
       import Swup from 'swup';
       const swup = new Swup({
-      animationSelector: '[class*="transition-fade"]' 
-    });
+        animationSelector: '[class*="transition-fade"]' 
+      });
+      
+      // Trigger resize after Swup page transitions
+      swup.hooks.on('content:replace', () => {
+        setTimeout(() => {
+          window.dispatchEvent(new Event('resize'));
+        }, 50);
+      });
     </script>
 
   </body>
 </html>
-
