@@ -47,9 +47,6 @@ const siteName = 'Cristiano Pinto';
     width: 100%;
   }
 
-  .grid-container {
-
-  }
 
   .transition-fade {
     transition: opacity 0.4s ease-in-out, backdrop-filter 0.4s ease-in-out;
@@ -80,9 +77,11 @@ const siteName = 'Cristiano Pinto';
     </script>
 
     <main id="swup" class="transition-fade">
-      <div class="grid-container ">
-      <slot/>
-      </div>
+      <div class="mobile-buffer customback">
+        <div class="grid-container ">
+        <slot/>
+        </div>
+     </div>
     </main>
 
     <!-- Lightbox for project detail images -->
