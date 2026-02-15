@@ -1199,6 +1199,11 @@ h1 {
     overflow-x: hidden;
     overflow-y: auto;
   }
+  
+  html, body {
+  touch-action: pan-x pan-y;
+  overscroll-behavior: none;
+}
 
   .grid-container {
     min-height: 100dvh; /* Changed from height */
