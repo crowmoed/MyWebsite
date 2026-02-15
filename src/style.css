@@ -1185,6 +1185,21 @@ h1 {
 
 
 @media (max-width: 768px) {
+  html, body {
+    width: 100vw;
+    max-width: 100vw;
+    overflow-x: hidden;
+    overflow-y: auto;
+    touch-action: pan-x pan-y;
+    overscroll-behavior: none;
+    position: relative;
+  }
+
+  * {
+    max-width: 100vw;
+    box-sizing: border-box;
+  }
+
   .project-sidebar {
     position: relative;
     top: 0;
@@ -1194,26 +1209,21 @@ h1 {
   .action-buttons {
     flex-direction: row;
   }
-  
-  body {
-    overflow-x: hidden;
-    overflow-y: auto;
-  }
-  
-  html, body {
-  touch-action: pan-x pan-y;
-  overscroll-behavior: none;
-}
 
   .grid-container {
-    min-height: 100dvh; /* Changed from height */
+    width: 100vw;
+    max-width: 100vw;
+    min-height: 100dvh;
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto auto;
     border: none;
-    overflow: visible; /* Changed from auto */
+    overflow: visible;
+    box-sizing: border-box;
   }
 
   #swup {
+    width: 100%;
+    max-width: 100vw;
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto auto;
     border: none;
@@ -1232,9 +1242,10 @@ h1 {
   .footer-section { grid-column: 1 / 2; grid-row: 4 / 5; padding: 28px 24px; }
   .social-link { padding: 24px 0; border-bottom: 1px solid var(--border-color); }
 
-
   .projects-wrapper {
     padding: 60px 24px;
+    width: 100%;
+    max-width: 100vw;
   }
   
   .projects-grid {
@@ -1284,125 +1295,74 @@ h1 {
     font-size: 0.8rem; 
     padding: 6px 12px; 
     border-radius: 20px;
-    }
+  }
+  
   .detail-container {
-      padding: 1rem;
-      overflow-x: hidden; /* Prevent accidental overflows */
-    }
+    padding: 1rem;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+  }
 
-    .content-grid {
-      display: flex;
-      flex-direction: column; /* Stack main and aside vertically */
-      gap: 2rem;
-      width: 100%;
-    }
+  .content-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    width: 100%;
+    max-width: 100%;
+  }
 
-    /* 2. Make sidebar and body take full width */
-    .project-body, 
-    .project-sidebar {
-      width: 100%;
-      max-width: 100%;
-      margin: 0;
-    }
+  .project-body, 
+  .project-sidebar {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+  }
 
-    /* 3. Reorder if you want the sidebar info above the body on mobile */
-    .project-sidebar {
-      order: 2; /* Moves sidebar below the body text */
-      border-top: 1px solid rgba(255, 255, 255, 0.1); /* Optional separator */
-      padding-top: 2rem;
-    }
+  .project-sidebar {
+    order: 2;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 2rem;
+  }
 
-    /* 4. Fix images/containers that might push width */
-    .project-hero-image img {
-      max-width: 100%;
-      height: auto;
-      border-radius: 8px;
-    }
+  .project-hero-image img {
+    max-width: 100%;
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+  }
 
-    /* 5. Ensure tags wrap nicely instead of pushing width */
-    .tech-stack-wrap {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
+  .tech-stack-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
 
-    /* 6. Prevent long words or URLs from breaking layout */
-    h1, p, li {
-      overflow-wrap: break-word;
-      word-wrap: break-word;
-    }
+  h1, p, li {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
 
-    /* 7. Ensure buttons take full width for easier tapping */
-    .action-btn {
-      display: flex;
-      justify-content: center;
-      width: 100%;
-      box-sizing: border-box;
-    }
+  .action-btn {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    box-sizing: border-box;
+  }
   
   .profile-image {
-      /* Slightly smaller on mobile to hide low-res artifacts */
-      width: 160px;
-      height: 160px;
-      margin: 0 auto; /* Center it if needed */
-      display: block; 
-    }
+    width: 160px;
+    height: 160px;
+    margin: 0 auto;
+    display: block; 
+  }
 
-    .profile-image::before {
-      /* Adjust border gap for the smaller size */
-      top: -5px;
-      left: -5px;
-      right: -5px;
-      bottom: -5px;
-      border-width: 2px; /* Thinner line looks cleaner on small screens */
-    }
-
-    
-    .profile-image::before {
-      animation: slowSpin 10s linear infinite;
-    }
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  .profile-image::before {
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    border-width: 2px;
+    animation: slowSpin 10s linear infinite;
+  }
 }
