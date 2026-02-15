@@ -917,6 +917,23 @@ function animate() {
     } else if (!isMobile) {
 
     }
+    if (isMobile){
+      // Slow auto-rotation for mobile
+      const mobileRotationSpeed = 0.0006;
+      const centerX = 0;
+      const centerY = 12.5;
+      const centerZ = 0;
+      
+      // Calculate current angle and distance
+      const radius = Math.sqrt(camera.position.x ** 2 + camera.position.z ** 2);
+      const currentAngle = Math.atan2(camera.position.z, camera.position.x);
+      const newAngle = currentAngle + mobileRotationSpeed;
+      
+      // Update camera position in orbit
+      camera.position.x = Math.cos(newAngle) * radius;
+      camera.position.z = Math.sin(newAngle) * radius;
+      camera.lookAt(centerX, centerY, centerZ);
+    }
   
   // Update shared uniforms once
   const timeUniform = { value: time };

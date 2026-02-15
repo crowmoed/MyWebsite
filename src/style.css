@@ -145,12 +145,56 @@ body::after {
 }
 
 /* Prevent EXIF-based rotation (fixes iPhone/Safari rotating the image) */
-.name-section .profile-pic,
+.name-section 
+.profile-pic,
 .name-section .profile-image img {
   transform: none;
   -webkit-image-orientation: none;
   image-orientation: none;
 }
+.profile-image {
+  margin-bottom: 12px;
+  position: relative;
+  width: 200px;
+  height: 200px;
+  display: inline-block;
+}
+
+/* The Border Layer */
+.profile-image::before {
+  content: "";
+  position: absolute;
+  /* Centering the ring outside the image */
+  top: -6px;
+  left: -6px;
+  right: -6px;
+  bottom: -6px;
+  border: 3px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+/* Spinning on Hover */
+.profile-image:hover::before {
+  transform: rotate(180deg);
+  border-color: rgba(255, 255, 255, 0.4); /* Subtle glow up */
+}
+
+.profile-pic {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  display: block;
+
+  /* Use this for photos to prevent pixelation during scaling */
+  image-rendering: auto; 
+  /* High quality downscaling */
+  image-rendering: -webkit-optimize-contrast; 
+}
+
 
 h1 {
   font-size: clamp(3rem, 6vw, 6.5rem);
@@ -942,20 +986,8 @@ strong { color: var(--text-main); font-weight: 500; }
 }
 
 /* --- PROFILE PIC REFINEMENT --- */
-.profile-pic {
-  width: 120px; /* Specific sizes are more predictable than percentages */
-  height: 120px;
-  object-fit: cover;
-  border-radius: 50%;
-  border: 2px solid var(--border-color);
-  padding: 4px;
-  transition: var(--transition);
-}
 
-.profile-pic:hover {
-  border-color: var(--accent-secondary);
-  transform: translateY(-2px);
-}
+
 
 /* --- BUTTONS --- */
 .action-buttons {
@@ -1032,19 +1064,6 @@ header.name-section {
   align-items: center;
   text-align: center;
   gap: 12px;
-}
-
-.profile-image {
-  margin-bottom: 12px;
-}
-
-.profile-pic {
-  width: 130px;
-  height: 130px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid rgba(255,255,255,0.08);
-  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
 }
 
 /* ---------- Typography ---------- */
@@ -1142,6 +1161,29 @@ h1 {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 @media (max-width: 768px) {
   .project-sidebar {
     position: relative;
@@ -1153,10 +1195,7 @@ h1 {
     flex-direction: row;
   }
   
-  .profile-pic {
-    width: 100px;
-    height: 100px;
-  }
+  
 
   .grid-container {
     height: 100dvh;
@@ -1176,11 +1215,8 @@ h1 {
 
   .name-section { grid-column: 1 / 2; grid-row: 1 / 2; padding: 48px 24px; border-right: none; }
   .name-section .profile-pic,
-  .name-section .profile-image img {
-    transform: none;
-    -webkit-image-orientation: none;
-    image-orientation: none;
-  }
+  .name-section 
+  
   h1 { font-size: 3.5rem; }
   .bio-section { grid-column: 1 / 2; grid-row: 2 / 3; border-right: none; }
   .nav-section { grid-column: 1 / 2; grid-row: 3 / 4; border-right: none; }
@@ -1240,8 +1276,84 @@ h1 {
     font-size: 0.8rem; 
     padding: 6px 12px; 
     border-radius: 20px;
-  }
+    }
+  .detail-container {
+      padding: 1rem;
+      overflow-x: hidden; /* Prevent accidental overflows */
+    }
 
+    .content-grid {
+      display: flex;
+      flex-direction: column; /* Stack main and aside vertically */
+      gap: 2rem;
+      width: 100%;
+    }
+
+    /* 2. Make sidebar and body take full width */
+    .project-body, 
+    .project-sidebar {
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
+    }
+
+    /* 3. Reorder if you want the sidebar info above the body on mobile */
+    .project-sidebar {
+      order: 2; /* Moves sidebar below the body text */
+      border-top: 1px solid rgba(255, 255, 255, 0.1); /* Optional separator */
+      padding-top: 2rem;
+    }
+
+    /* 4. Fix images/containers that might push width */
+    .project-hero-image img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+
+    /* 5. Ensure tags wrap nicely instead of pushing width */
+    .tech-stack-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* 6. Prevent long words or URLs from breaking layout */
+    h1, p, li {
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+    }
+
+    /* 7. Ensure buttons take full width for easier tapping */
+    .action-btn {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+      box-sizing: border-box;
+    }
+  
+  .profile-image {
+      /* Slightly smaller on mobile to hide low-res artifacts */
+      width: 160px;
+      height: 160px;
+      margin: 0 auto; /* Center it if needed */
+      display: block; 
+    }
+
+    .profile-image::before {
+      /* Adjust border gap for the smaller size */
+      top: -5px;
+      left: -5px;
+      right: -5px;
+      bottom: -5px;
+      border-width: 2px; /* Thinner line looks cleaner on small screens */
+    }
+
+    
+    .profile-image::before {
+      animation: slowSpin 10s linear infinite;
+    }
+    
 
 
 
