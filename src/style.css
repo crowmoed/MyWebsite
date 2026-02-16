@@ -86,7 +86,7 @@ body::after {
 
 /* --- GRID LAYOUT --- */
 .grid-container {
-  width: 70%;
+  width: 80%;
   height: 100dvh;
   max-height: 100dvh;
   display: grid;
