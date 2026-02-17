@@ -1,13 +1,18 @@
 ---
 import '../style.css';
+import Lightbox from '../components/Lightbox.astro';
 
 interface Props {
   title?: string;
   description?: string;
   /** Absolute path for social share image (e.g. /cristianopinto.png). Uses origin from current URL. */
   image?: string;
+  /** Whether to load the Three.js winter scene background (homepage only for performance). */
+  backgroundScene?: boolean;
+  /** Optional JSON-LD structured data object. */
+  jsonLd?: object;
 }
-const { title = 'Cristiano Pinto', description = 'Backend developer portfolio. Projects in Python, Java, C++, ML, game dev, and systems. Available for new opportunities.', image = '/cristianopinto.png' } = Astro.props;
+const { title = 'Cristiano Pinto', description = 'Backend developer portfolio. Projects in Python, Java, C++, ML, game dev, and systems. Available for new opportunities.', image = '/cristianopinto.png', backgroundScene = false, jsonLd } = Astro.props;
 
 const siteOrigin = Astro.url.origin;
 const canonicalURL = new URL(Astro.url.pathname, siteOrigin).href;
@@ -17,7 +22,7 @@ const siteName = 'Cristiano Pinto';
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalURL} />
     <title>{title}</title>
@@ -38,8 +43,11 @@ const siteName = 'Cristiano Pinto';
     <meta name="twitter:image" content={imageURL} />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="icon" type="image/svg+xml" href="/cristianopinto-circle.png" />
+    {jsonLd && (
+      <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+    )}
     <style is:global>
   html, body {
     overflow: hidden;
@@ -47,33 +55,50 @@ const siteName = 'Cristiano Pinto';
     width: 100%;
   }
 
-
   .transition-fade {
     transition: opacity 0.4s ease-in-out, backdrop-filter 0.4s ease-in-out;
-    
     opacity: 1;
     -webkit-backdrop-filter: blur(0px);
   }
-  
+
   html.is-animating .transition-fade {
     opacity: 0;
-    
     backdrop-filter: blur(0px);
     -webkit-backdrop-filter: blur(0px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .transition-fade,
+    html.is-animating .transition-fade {
+      transition: none;
+    }
   }
 </style>
   </head>
   
   <body>
-    <canvas id="bg" style="position: fixed; top: 0; left: 0; z-index: -99; width: 100%; height: 100%;"></canvas>
-    <script src="../main.js"></script>
+    <a href="#swup" class="skip-link">Skip to main content</a>
+    {backgroundScene && (
+      <>
+        <canvas id="bg" style="position: fixed; top: 0; left: 0; z-index: -99; width: 100%; height: 100%;"></canvas>
+        <script src="../main.js"></script>
+        <script>
+          document.addEventListener('DOMContentLoaded', () => {
+            window.dispatchEvent(new Event('resize'));
+          });
+        </script>
+      </>
+    )}
 
-    <script>
-      // Trigger resize after page transitions
-      document.addEventListener('DOMContentLoaded', () => {
-        window.dispatchEvent(new Event('resize'));
-      });
-    </script>
+    <header class="site-header" aria-label="Main navigation">
+      <div class="site-header-inner">
+        <a href="/" class="site-logo">Cristiano Pinto</a>
+        <nav class="site-nav">
+          <a href="/projects">Projects</a>
+          <a href="mailto:thecristiano.pinto@gmail.com">Contact</a>
+        </nav>
+      </div>
+    </header>
 
     <main id="swup" class="transition-fade">
       <div class="mobile-buffer customback">
@@ -83,12 +108,7 @@ const siteName = 'Cristiano Pinto';
      </div>
     </main>
 
-    <!-- Lightbox for project detail images -->
-    <div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="Enlarge image" hidden>
-      <button type="button" class="lightbox-close" aria-label="Close">×</button>
-      <div class="lightbox-backdrop"></div>
-      <img class="lightbox-img" src="" alt="" />
-    </div>
+    <Lightbox />
 
     <script>
       (function() {
@@ -96,20 +116,55 @@ const siteName = 'Cristiano Pinto';
         const lightboxImg = lightbox?.querySelector('.lightbox-img');
         const closeBtn = lightbox?.querySelector('.lightbox-close');
         const backdrop = lightbox?.querySelector('.lightbox-backdrop');
+        const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+        let previouslyFocused = null;
+
+        function getFocusables(el) {
+          return Array.from(el.querySelectorAll(focusableSelector)).filter(e => !e.hasAttribute('disabled'));
+        }
+
+        function trapFocus(e) {
+          if (e.key !== 'Tab' || !lightbox?.classList.contains('is-open')) return;
+          const focusables = getFocusables(lightbox);
+          if (focusables.length === 0) return;
+          const first = focusables[0];
+          const last = focusables[focusables.length - 1];
+          if (e.shiftKey) {
+            if (document.activeElement === first) {
+              e.preventDefault();
+              last.focus();
+            }
+          } else {
+            if (document.activeElement === last) {
+              e.preventDefault();
+              first.focus();
+            }
+          }
+        }
+
         function open(src, alt) {
           if (!lightbox || !lightboxImg) return;
+          previouslyFocused = document.activeElement;
           lightboxImg.src = src;
           lightboxImg.alt = alt || 'Enlarged image';
           lightbox.hidden = false;
           lightbox.classList.add('is-open');
           document.body.style.overflow = 'hidden';
+          closeBtn?.focus();
+          document.addEventListener('keydown', trapFocus);
         }
+
         function close() {
           if (!lightbox) return;
           lightbox.hidden = true;
           lightbox.classList.remove('is-open');
           document.body.style.overflow = '';
+          document.removeEventListener('keydown', trapFocus);
+          if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+            previouslyFocused.focus();
+          }
         }
+
         document.body.addEventListener('click', function(e) {
           if (e.target.tagName === 'IMG' && e.target.closest('.project-hero-image')) {
             e.preventDefault();
@@ -127,15 +182,17 @@ const siteName = 'Cristiano Pinto';
 
     <script>
       import Swup from 'swup';
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       const swup = new Swup({
-        animationSelector: '[class*="transition-fade"]' 
+        animationSelector: prefersReducedMotion ? null : '[class*="transition-fade"]',
+        animateHistoryBrowsing: !prefersReducedMotion
       });
-      
-      // Trigger resize after Swup page transitions
+
       swup.hooks.on('content:replace', () => {
+        const delay = prefersReducedMotion ? 0 : 50;
         setTimeout(() => {
-          window.dispatchEvent(new Event('resize'));
-        }, 50);
+          if (document.getElementById('bg')) window.dispatchEvent(new Event('resize'));
+        }, delay);
       });
     </script>
 

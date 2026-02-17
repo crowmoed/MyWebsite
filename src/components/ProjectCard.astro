@@ -1,0 +1,33 @@
+---
+import type { Project } from '../data/projects';
+import GitHub from './icons/GitHub.astro';
+
+interface Props {
+  project: Project;
+}
+const { project } = Astro.props;
+---
+<article class="project-card">
+  {project.thumbnail ? (
+    <a href={`/projects/${project.slug}`} class="card-thumbnail">
+      <img src={project.thumbnail} alt={project.title} loading="lazy" />
+    </a>
+  ) : (
+    <a href={`/projects/${project.slug}`} class="card-thumbnail card-thumbnail-placeholder">
+      <span class="card-thumbnail-label">{project.title}</span>
+    </a>
+  )}
+  <div class="card-content">
+    <h3>{project.title}</h3>
+    <p>{project.cardDescription}</p>
+    <div class="tech-stack">
+      {project.cardStack.map((tech) => <span>{tech}</span>)}
+    </div>
+  </div>
+  <div class="card-links">
+    <a href={`/projects/${project.slug}`} class="read-more">Read More <span class="arrow-icon">→</span></a>
+    <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" class="github-icon" aria-label="GitHub">
+      <GitHub width={22} height={22} />
+    </a>
+  </div>
+</article>

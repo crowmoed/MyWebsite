@@ -1,11 +1,27 @@
-
-
-
 import './style.css'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (prefersReducedMotion) {
+  const canvas = document.querySelector('#bg');
+  if (canvas && canvas instanceof HTMLCanvasElement) {
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      const draw = () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        ctx.fillStyle = '#0a1428';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      };
+      draw();
+      window.addEventListener('resize', draw);
+    }
+  }
+} else {
+try {
 // --- MOBILE DETECTION & PERFORMANCE SETTINGS ---
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
 
@@ -27,21 +43,21 @@ const SETTINGS = isMobile ? {
   fogDensity: 0.02,
   textureSize: 32
 } : {
-  // Desktop: full quality
-  bgSnowCount: 50000,
-  mainSnowCount: 40000,
-  closeSnowCount: 3000,
-  vortexCount: 1000,
-  sparkleCount: 1000,
-  wispCount: 2000,
-  dustCount: 30000,
-  treeCount: 800, // Reduced from 1500 but better distributed
-  groundSegments: 128,
-  shadowMapSize: 4096,
-  pixelRatio: Math.min(window.devicePixelRatio, 2),
+  // Desktop: toned down for easier run
+  bgSnowCount: 18000,
+  mainSnowCount: 14000,
+  closeSnowCount: 1200,
+  vortexCount: 400,
+  sparkleCount: 400,
+  wispCount: 800,
+  dustCount: 12000,
+  treeCount: 600,
+  groundSegments: 80,
+  shadowMapSize: 2048,
+  pixelRatio: Math.min(window.devicePixelRatio, 1.5),
   enableShadows: true,
-  autoRotate: true,
-  fogDensity: 0.008,
+  autoRotate: false,
+  fogDensity: 0.01,
   textureSize: 32
 };
 
@@ -67,7 +83,7 @@ const controls = new OrbitControls(camera, renderer.domElement)
 controls.enableDamping = true
 controls.dampingFactor = 0.05
 controls.maxPolarAngle = Math.PI / 2 - 0.1;
-controls.autoRotate = SETTINGS.autoRotate;
+controls.autoRotate = false; // we use custom oscillating motion instead, so camera stays near origin
 controls.autoRotateSpeed = 0.2;
 // --- 2. TEXTURE GENERATORS ---
 function createSoftParticle() {
@@ -143,7 +159,7 @@ ctx.fillStyle = '#e8f0ff';
 ctx.fillRect(0, 0, size, size);
 
 // Add heavy grain/noise for snow texture
-const grainCount = isMobile ? 8000 : 30000;
+const grainCount = isMobile ? 8000 : 12000;
 for (let i = 0; i < grainCount; i++) {
   const x = Math.random() * size;
   const y = Math.random() * size;
@@ -154,7 +170,7 @@ for (let i = 0; i < grainCount; i++) {
 }
 
 // Add darker spots for depth variation
-const spotCount = isMobile ? 150 : 500;
+const spotCount = isMobile ? 150 : 250;
 for (let i = 0; i < spotCount; i++) {
   const x = Math.random() * size;
   const y = Math.random() * size;
@@ -167,7 +183,7 @@ for (let i = 0; i < spotCount; i++) {
 }
 
 // Add bright sparkle spots
-const sparkleCount = isMobile ? 100 : 400;
+const sparkleCount = isMobile ? 100 : 200;
 for (let i = 0; i < sparkleCount; i++) {
   const x = Math.random() * size;
   const y = Math.random() * size;
@@ -265,8 +281,6 @@ const ground = new THREE.Mesh(groundGeo, groundMat);
 ground.receiveShadow = SETTINGS.enableShadows;
 scene.add(ground);
 // --- 5. OPTIMIZED TREE FOREST WITH SPATIAL PARTITIONING ---
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-
 const loader = new GLTFLoader();
 const treeInstances = [];
 const treeData = []; // Store tree metadata
@@ -546,14 +560,23 @@ if (!isMobile) {
       return; 
     }
 
+    const wasOffScreen = !mouse.onScreen;
     mouse.onScreen = true;
     mouse.isMoving = true;
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    
+    mouse.lastMoveTime = Date.now();
+
+    if (wasOffScreen) {
+      // Just re-entered: sync mouse to current camera so we don't jump
+      // (camera may have auto-rotated while mouse was away)
+      mouse.x = camera.position.x / 12;
+      mouse.y = (camera.position.y - 25) / 6;
+    } else {
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    }
+
     mouse.normalizedX = mouse.x * 0.25;
     mouse.normalizedZ = -mouse.y * 0.25;
-    mouse.lastMoveTime = Date.now();
   });
 
   window.addEventListener('mouseout', (e) => {
@@ -915,25 +938,29 @@ function animate() {
     camera.lookAt(0, 12.5, 0); 
     
     } else if (!isMobile) {
-
+      // Desktop: smoothly return to fixed center when mouse leaves (no auto sway)
+      const targetX = 0;
+      const targetY = 25;
+      const targetZ = 40;
+      const returnSpeed = 0.03;
+      camera.position.x += (targetX - camera.position.x) * returnSpeed;
+      camera.position.y += (targetY - camera.position.y) * returnSpeed;
+      camera.position.z += (targetZ - camera.position.z) * returnSpeed;
+      camera.lookAt(0, 12.5, 0);
     }
-    if (isMobile){
-      // Slow auto-rotation for mobile
-      const mobileRotationSpeed = 0.0006;
-      const centerX = 0;
-      const centerY = 12.5;
-      const centerZ = 0;
-      
-      // Calculate current angle and distance
-      const radius = Math.sqrt(camera.position.x ** 2 + camera.position.z ** 2);
-      const currentAngle = Math.atan2(camera.position.z, camera.position.x);
-      const newAngle = currentAngle + mobileRotationSpeed;
-      
-      // Update camera position in orbit
-      camera.position.x = Math.cos(newAngle) * radius;
-      camera.position.z = Math.sin(newAngle) * radius;
-      camera.lookAt(centerX, centerY, centerZ);
-    }
+  if (isMobile) {
+    // Mobile: oscillating rotation (stays near origin)
+    const centerX = 0;
+    const centerY = 12.5;
+    const centerZ = 0;
+    const radius = Math.sqrt(camera.position.x ** 2 + camera.position.z ** 2);
+    const oscAngleAmplitude = 0.35;
+    const oscSpeed = 0.25;
+    const angle = oscAngleAmplitude * Math.sin(time * oscSpeed);
+    camera.position.x = Math.sin(angle) * radius;
+    camera.position.z = Math.cos(angle) * radius;
+    camera.lookAt(centerX, centerY, centerZ);
+  }
   
   // Update shared uniforms once
   const timeUniform = { value: time };
@@ -1075,3 +1102,20 @@ function animate() {
   renderer.render(scene, camera);
 }
 animate();
+} catch (err) {
+  const canvas = document.querySelector('#bg');
+  if (canvas && canvas instanceof HTMLCanvasElement) {
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      const draw = () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        ctx.fillStyle = '#0a1428';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      };
+      draw();
+      window.addEventListener('resize', draw);
+    }
+  }
+}
+}

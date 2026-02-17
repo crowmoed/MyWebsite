@@ -1,13 +1,10 @@
 ---
 import Layout from '../layout/Layout.astro';
+import ProjectCard from '../components/ProjectCard.astro';
+import { projects } from '../data/projects';
 
 const title = 'Projects – Cristiano Pinto';
 const description = 'Selected works: HurricAIne, Myth & Metal, Pilly, Web Scraper, Calendar Notes. ML, game engines, Minecraft mods, and more.';
-
-const githubIcon = `
-<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-  <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.05-.015-2.07-3.345.72-4.05-1.605-4.05-1.605-.54-1.38-1.335-1.755-1.335-1.755-1.095-.75.09-.735.09-.735 1.215.09 1.845 1.245 1.845 1.245 1.08 1.845 2.835 1.305 3.525.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.225 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405 1.02 0 2.04.135 3 .405 2.295-1.545 3.3-1.23 3.3-1.23.66 1.695.24 2.925.12 3.225.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.285 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
-</svg>`;
 ---
 
 <Layout title={title} description={description}>
@@ -15,120 +12,16 @@ const githubIcon = `
     
     <header class="projects-header">
       <a href="/" class="back-link">
-        <span class="arrow">←</span> Back
+        <span class="arrow">←</span> Back to Home
       </a>
       <h1 class="fade-in">Selected Works</h1>
+      <p class="intro fade-in-delay">Projects across machine learning, systems, and full-stack development.</p>
     </header>
 
     <div class="projects-grid fade-in-delay">
-
-      <article class="project-card">
-        <a href="/projects/Hurricaine" class="card-thumbnail"  >
-          <img src="/hurricAIne-poster.png" alt="HurricAIne"  />
-        </a>
-        <div class="card-content">
-          <h3>HurricAIne</h3>
-          <p>Deep learning system for predicting 6-hour hurricane displacement vectors using gridded ERA5 atmospheric reanalysis data and CNN-based regression.</p>
-          
-          <div class="tech-stack">
-            <span>Python</span>
-            <span>TensorFlow</span>
-            <span>CNN</span>
-            <span>ERA5</span>
-          </div>
-        </div>
-        
-        <div class="card-links">
-          <a href="/projects/Hurricaine" class="read-more">Read More <span class="arrow-icon">→</span></a>
-          <a href="https://github.com/crowmoed/HurricAIne---Python" target="_blank" rel="noopener noreferrer" class="github-icon" aria-label="GitHub" set:html={githubIcon} />
-        </div>
-      </article>
-
-      <article class="project-card">
-        <a href="/projects/MythMetal" class="card-thumbnail">
-          <img src="/myth_and_metal.gif" alt="Myth & Metal" />
-        </a>
-        <div class="card-content">
-          <h3>Myth & Metal</h3>
-          <p>Minecraft Forge mod featuring procedural dungeon generation, custom boss fights, tiered item rarity system with custom glint rendering.</p>
-          
-          <div class="tech-stack">
-            <span>Java</span>
-            <span>Minecraft Forge</span>
-            <span>Mixins</span>
-          </div>
-        </div>
-        
-        <div class="card-links">
-          <a href="/projects/MythMetal" class="read-more">Read More <span class="arrow-icon">→</span></a>
-          <a href="https://github.com/crowmoed/Myth-Metal---Java" target="_blank" rel="noopener noreferrer" class="github-icon" aria-label="GitHub" set:html={githubIcon} />
-        </div>
-      </article>
-
-      <article class="project-card">
-        <a href="/projects/Pilly" class="card-thumbnail card-thumbnail-placeholder">
-          <span class="card-thumbnail-label">Pilly</span>
-        </a>
-        <div class="card-content">
-          <h3>Pilly</h3>
-          <p>Hardware-accelerated 2D game engine built on SDL3 with Euler-integrated physics, AABB collision detection, and sprite-based rendering pipeline.</p>
-          
-          <div class="tech-stack">
-            <span>C++</span>
-            <span>SDL3</span>
-            <span>CMake</span>
-          </div>
-        </div>
-        
-        <div class="card-links">
-          <a href="/projects/Pilly" class="read-more">Read More <span class="arrow-icon">→</span></a>
-          <a href="https://github.com/crowmoed/Pilly---C" target="_blank" rel="noopener noreferrer" class="github-icon" aria-label="GitHub" set:html={githubIcon} />
-        </div>
-      </article>
-
-      <article class="project-card">
-        <a href="/projects/WebScraper" class="card-thumbnail">
-          <img src="/data-scraper.png" alt="Web Scraper" />
-        </a>
-        <div class="card-content">
-          <h3>Web Scraper</h3>
-          <p>Dual-target fanfiction scraping system with two-stage content filtering: keyword matching followed by local LLM classification via Ollama.</p>
-          
-          <div class="tech-stack">
-            <span>Python</span>
-            <span>SeleniumBase</span>
-            <span>Ollama</span>
-          </div>
-        </div>
-        
-        <div class="card-links">
-          <a href="/projects/WebScraper" class="read-more">Read More <span class="arrow-icon">→</span></a>
-          <a href="https://github.com/crowmoed/Webscraper---Python" target="_blank" rel="noopener noreferrer" class="github-icon" aria-label="GitHub" set:html={githubIcon} />
-        </div>
-      </article>
-
-      <article class="project-card">
-        <a href="/projects/CalendarApp" class="card-thumbnail">
-          <img src="/calendar-app.png" alt="Calendar Notes" />
-        </a>
-        <div class="card-content">
-          <h3>Calendar Notes</h3>
-          <p>Month-view calendar application with per-day note-taking functionality, flat-file persistence, and grid-based navigation.</p>
-          
-          <div class="tech-stack">
-            <span>Python</span>
-            <span>CustomTkinter</span>
-            <span>File I/O</span>
-          </div>
-        </div>
-        
-        <div class="card-links">
-          <a href="/projects/CalendarApp" class="read-more">Read More <span class="arrow-icon">→</span></a>
-          <a href="https://github.com/crowmoed/Calendar-Notes-App---Python" target="_blank" rel="noopener noreferrer" class="github-icon" aria-label="GitHub" set:html={githubIcon} />
-        </div>
-      </article>
-
+      {projects.map((project) => (
+        <ProjectCard project={project} />
+      ))}
     </div>
+  </div>
 </Layout>
-
-
