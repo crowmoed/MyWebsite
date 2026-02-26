@@ -22,6 +22,7 @@ const siteName = 'Cristiano Pinto';
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalURL} />
@@ -48,32 +49,6 @@ const siteName = 'Cristiano Pinto';
     {jsonLd && (
       <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
     )}
-    <style is:global>
-  html, body {
-    overflow: hidden;
-    height: 100%;
-    width: 100%;
-  }
-
-  .transition-fade {
-    transition: opacity 0.4s ease-in-out, backdrop-filter 0.4s ease-in-out;
-    opacity: 1;
-    -webkit-backdrop-filter: blur(0px);
-  }
-
-  html.is-animating .transition-fade {
-    opacity: 0;
-    backdrop-filter: blur(0px);
-    -webkit-backdrop-filter: blur(0px);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .transition-fade,
-    html.is-animating .transition-fade {
-      transition: none;
-    }
-  }
-</style>
   </head>
   
   <body>
@@ -188,12 +163,32 @@ const siteName = 'Cristiano Pinto';
         animateHistoryBrowsing: !prefersReducedMotion
       });
 
+      function initProjectReveal() {
+        if (prefersReducedMotion) return;
+        const cards = document.querySelectorAll('.project-card-reveal:not(.in-view)');
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('in-view');
+                observer.unobserve(entry.target);
+              }
+            });
+          },
+          { rootMargin: '0px 0px -80px 0px', threshold: 0 }
+        );
+        cards.forEach((el) => observer.observe(el));
+      }
+
       swup.hooks.on('content:replace', () => {
         const delay = prefersReducedMotion ? 0 : 50;
         setTimeout(() => {
           if (document.getElementById('bg')) window.dispatchEvent(new Event('resize'));
+          initProjectReveal();
         }, delay);
       });
+
+      document.addEventListener('DOMContentLoaded', initProjectReveal);
     </script>
 
   </body>

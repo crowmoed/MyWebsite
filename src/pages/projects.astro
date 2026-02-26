@@ -8,19 +8,23 @@ const description = 'Selected works: HurricAIne, Myth & Metal, Pilly, Web Scrape
 ---
 
 <Layout title={title} description={description} backgroundScene={true}>
-  <div class="projects-wrapper back">
+  <div class="projects-wrapper back projects-page">
     
     <header class="projects-header">
-      <a href="/" class="back-link">
+      <a href="/" class="back-link widget-fade">
         <span class="arrow">←</span> Back to Home
       </a>
-      <h1 class="fade-in">Selected Works</h1>
-      <p class="intro fade-in-delay">Projects across machine learning, systems, and full-stack development.</p>
+      <h1 class="widget-fade">Selected Works</h1>
+      <p class="intro widget-fade">Projects across machine learning, systems, and full-stack development.</p>
     </header>
 
-    <div class="projects-grid fade-in-delay">
+    <hr class="divider-frost widget-fade" />
+
+    <div class="projects-grid">
       {projects.map((project) => (
-        <ProjectCard project={project} />
+        <div class="project-card-reveal">
+          <ProjectCard project={project} />
+        </div>
       ))}
     </div>
   </div>
